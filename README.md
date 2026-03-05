@@ -18,8 +18,15 @@ An MES tool/board to track Weekend Ops with tasks, progress, and delay communica
 
 ## Project Requirements
 
+- EOM March
 - On MES Board Q2
 - accessible by all departments
 - UI separate by shift hours and Spirits
 - Usable by mobile (IPhone 12+, MS Surface)
 - OPTIONAL Automated Notification (MS Teams)
+
+## Failures to mitigate:
+
+- not seeing board
+- pencil whipping
+- over-use of notifications

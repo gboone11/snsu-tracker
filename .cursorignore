@@ -1,0 +1,34 @@
+# API credentials and keys
+*.pem
+
+# Output files
+*.xlsx
+results.xlsx
+models_*.xlsx
+
+# Environment and config files
+.env
+.envrc
+
+# Cache and temporary files
+__pycache__/
+.ruff_cache/
+*.pyc
+*.pyo
+
+# IDE files
+.vscode/
+.idea/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
