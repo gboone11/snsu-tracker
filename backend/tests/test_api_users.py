@@ -20,17 +20,7 @@ class TestUserAPI(unittest.TestCase):
         if os.path.exists(self.temp_db.name):
             os.unlink(self.temp_db.name)
 
-    def test_create_user(self):
-        response = self.client.post("/users", json={
-            "username": "jdoe",
-            "full_name": "John Doe",
-            "initials": "JD",
-            "team_name": "Operations"
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("user_id", response.json()["data"])
-
-    def test_get_users(self):
+    def test_create_and_get_users(self):
         self.client.post("/users", json={
             "username": "jdoe",
             "full_name": "John Doe",
@@ -85,7 +75,23 @@ class TestUserAPI(unittest.TestCase):
         response = self.client.delete(f"/users/{user_id}")
         self.assertEqual(response.status_code, 200)
         
-        get_response = self.client.get("/users")
+        get_response = self.client.get(f"/users/{user_id}")
+        self.assertEqual(get_response.status_code, 404)
+
+    def test_deactivate_user(self):
+        create_response = self.client.post("/users", json={
+            "username": "jdoe",
+            "full_name": "John Doe",
+            "initials": "JD",
+            "team_name": "Operations"
+        })
+
+        user_id = create_response.json()["data"]["user_id"]
+        
+        response = self.client.post(f"/users/{user_id}/deactivate")
+        self.assertEqual(response.status_code, 200)
+        
+        get_response = self.client.get(f"/users")
         self.assertEqual(len(get_response.json()["data"]), 0)
 
 
