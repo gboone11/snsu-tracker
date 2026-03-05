@@ -8,12 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from classes.api_facade import Api_Facade
-from classes.asset import Asset
-from classes.database import Database
-from classes.model import Model
+from database import Database
 
-app = FastAPI(title="Falsey Finder API", version="1.0.0")
+app = FastAPI(title="SNSU Tracker API", version="1.0.0")
 
 # Enable CORS for React frontend
 app.add_middleware(
@@ -26,24 +23,70 @@ app.add_middleware(
 
 
 # Pydantic models for request/response
-class SyncRequest(BaseModel):
-    pass
+class UserCreate(BaseModel):
+    username: str
+    full_name: str
+    initials: str
+    team_name: str
 
 
-class AnalysisRequest(BaseModel):
-    asset: str
-    limit: int = 10
-    month: Optional[int] = None
-    year: Optional[int] = None
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    initials: Optional[str] = None
+    team_name: Optional[str] = None
+    is_active: Optional[int] = None
 
 
 class ApiResponse(BaseModel):
     message: Optional[str] = None
     data: Optional[Any] = None
 
-    def __init__(
-        self, message: Optional[str] = None, data: Optional[Any] = None, **kwargs: Any
-    ) -> None:
-        super().__init__(message=message, data=data, **kwargs)
+
+# Initialize database
+db = Database()
+
+
+# User endpoints
+@app.post("/users", response_model=ApiResponse)
+def create_user(user: UserCreate):
+    try:
+        user_id = db.create_user(user.username, user.full_name, user.initials, user.team_name)
+        return ApiResponse(message="User created", data={"user_id": user_id})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/users", response_model=ApiResponse)
+def get_users():
+    users = db.get_all_users()
+    return ApiResponse(data=users)
+
+
+@app.get("/users/{user_id}", response_model=ApiResponse)
+def get_user(user_id: int):
+    user = db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return ApiResponse(data=user)
+
+
+@app.put("/users/{user_id}", response_model=ApiResponse)
+def update_user(user_id: int, user: UserUpdate):
+    updates = {k: v for k, v in user.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    success = db.update_user(user_id, updates)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    return ApiResponse(message="User updated")
+
+
+@app.delete("/users/{user_id}", response_model=ApiResponse)
+def delete_user(user_id: int):
+    success = db.delete_user(user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    return ApiResponse(message="User deleted")
 
 
