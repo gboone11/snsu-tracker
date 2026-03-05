@@ -90,3 +90,15 @@ def delete_user(user_id: int):
     return ApiResponse(message="User deleted")
 
 
+@app.post("/users/{user_id}/deactivate", response_model=ApiResponse)
+def deactivate_user(user_id: int):
+    success = db.deactivate_user(user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="User not found")
+    return ApiResponse(message="User deactivated")
+
+
+@app.post("/clear-data", response_model=ApiResponse)
+def clear_all_data():
+    db.clear_data()
+    return ApiResponse(message="All data cleared")

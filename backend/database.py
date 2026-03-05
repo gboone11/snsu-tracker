@@ -228,6 +228,11 @@ class Database:
 
     def delete_user(self, user_id: int) -> bool:
         with self.get_connection() as conn:
+            cursor = conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+            return cursor.rowcount > 0
+
+    def deactivate_user(self, user_id: int) -> bool:
+        with self.get_connection() as conn:
             cursor = conn.execute("UPDATE users SET is_active = 0 WHERE user_id = ?", (user_id,))
             return cursor.rowcount > 0
 
