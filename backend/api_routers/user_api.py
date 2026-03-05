@@ -1,10 +1,12 @@
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from database import Database
+from database.connection import Database
+from database.user_repository import UserRepository
 
 router = APIRouter()
 db = Database()
+user_repo = UserRepository(db)
 
 
 class UserCreate(BaseModel):
@@ -24,7 +26,7 @@ class UserUpdate(BaseModel):
 @router.post("/users")
 def create_user(user: UserCreate):
     try:
-        user_id = db.create_user(user.username, user.full_name, user.initials, user.team_name)
+        user_id = user_repo.create(user.username, user.full_name, user.initials, user.team_name)
         return {"message": "User created", "data": {"user_id": user_id}}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -32,13 +34,13 @@ def create_user(user: UserCreate):
 
 @router.get("/users")
 def get_users():
-    users = db.get_all_users()
+    users = user_repo.get_all()
     return {"data": users}
 
 
 @router.get("/users/{user_id}")
 def get_user(user_id: int):
-    user = db.get_user_by_id(user_id)
+    user = user_repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"data": user}
@@ -50,7 +52,7 @@ def update_user(user_id: int, user: UserUpdate):
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
     
-    success = db.update_user(user_id, updates)
+    success = user_repo.update(user_id, updates)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User updated"}
@@ -58,7 +60,7 @@ def update_user(user_id: int, user: UserUpdate):
 
 @router.delete("/users/{user_id}")
 def delete_user(user_id: int):
-    success = db.delete_user(user_id)
+    success = user_repo.delete(user_id)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted"}
@@ -66,7 +68,7 @@ def delete_user(user_id: int):
 
 @router.post("/users/{user_id}/deactivate")
 def deactivate_user(user_id: int):
-    success = db.deactivate_user(user_id)
+    success = user_repo.deactivate(user_id)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deactivated"}

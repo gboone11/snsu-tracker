@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from api import app, db
+from api_routers.user_api import user_repo
 
 
 class TestUserAPI(unittest.TestCase):
@@ -14,6 +15,7 @@ class TestUserAPI(unittest.TestCase):
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
         self.temp_db.close()
         db.db_path = self.temp_db.name
+        user_repo.db.db_path = self.temp_db.name
         db._init_db()
 
     def tearDown(self):

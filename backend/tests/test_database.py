@@ -2,7 +2,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
-from database import Database
+from database.connection import Database
 
 
 class TestDatabase(unittest.TestCase):
