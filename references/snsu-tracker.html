@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNSU Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1a1a1a; color: #fff; }
+        .header { background: linear-gradient(135deg, #8b7355 0%, #6b5644 100%); padding: 20px; text-align: center; border-bottom: 4px solid #d4af37; }
+        .header h1 { font-size: 32px; margin-bottom: 8px; }
+        .container { max-width: 1800px; margin: 0 auto; padding: 20px; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; background: #8b7355; color: white; margin: 5px; }
+        .btn:hover { background: #6b5644; }
+        
+        .line-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 20px 0; }
+        .line-card { background: #2c2c2c; padding: 30px; border-radius: 12px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; }
+        .line-card:hover { background: #3c3c3c; border-color: #8b7355; transform: translateY(-4px); }
+        .line-card .number { font-size: 48px; font-weight: 700; color: #8b7355; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #2c2c2c; font-size: 12px; }
+        th { background: #8b7355; padding: 10px 8px; text-align: left; border: 1px solid #444; }
+        td { padding: 10px 8px; border: 1px solid #444; }
+        .status-not-started { background: #424242; color: #999; }
+        .status-in-progress { background: #f57c00; color: white; font-weight: 600; animation: pulse 2s infinite; }
+        .status-completed { background: #2e7d32; color: white; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        .detail-table { font-size: 14px; }
+        .detail-table td { padding: 16px; }
+        .signoff-box { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+        .signoff-box input { padding: 6px 10px; border: 1px solid #666; background: #1a1a1a; color: white; border-radius: 4px; }
+        .signoff-box button { padding: 6px 16px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .signed { color: #4caf50; font-weight: 600; font-size: 16px; }
+        
+        .comm-board { background: #2c2c2c; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .comm-board h3 { margin-bottom: 16px; color: #d4af37; }
+        .note-input { width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #666; color: white; border-radius: 6px; margin-bottom: 12px; font-family: inherit; }
+        .notes-list { max-height: 300px; overflow-y: auto; }
+        .note { background: #1a1a1a; padding: 12px; border-radius: 6px; margin-bottom: 8px; border-left: 3px solid #8b7355; }
+        .note-header { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 11px; color: #999; }
+        
+        .time-badge { background: #1a1a1a; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-block; }
+        .duration { color: #d4af37; font-weight: 600; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: #2c2c2c; padding: 30px; border-radius: 12px; max-width: 800px; max-height: 80vh; overflow-y: auto; }
+        .modal-content h2 { margin-bottom: 20px; color: #d4af37; }
+        .config-grid { display: grid; gap: 12px; margin: 20px 0; }
+        .config-row { display: grid; grid-template-columns: 2fr 3fr 1fr; gap: 10px; align-items: center; }
+        .config-row input { padding: 8px; background: #1a1a1a; border: 1px solid #666; color: white; border-radius: 4px; }
+        .clickable-cell { cursor: pointer; }
+        .clickable-cell:hover { opacity: 0.8; }
+        .time-on-track { color: #4caf50; }
+        .time-behind { color: #f44336; font-weight: 700; }
+        .signoff-col { background: #1a1a1a; padding: 12px !important; }
+
+        .signoff-col button { padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .initials-list { font-size: 10px; color: #4caf50; margin-top: 4px; }
+        .datetime-picker { display: flex; flex-direction: column; gap: 15px; }
+        .datetime-picker input[type="date"], .datetime-picker input[type="time"] { padding: 12px; background: #1a1a1a; border: 1px solid #666; color: white; border-radius: 4px; font-size: 16px; }
+        .datetime-picker input[type="date"]::-webkit-calendar-picker-indicator, .datetime-picker input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>SNSU Tracker</h1>
+        <div style="font-size: 14px; color: #d4af37; margin-top: 4px;">Sunday Night Start Up Tracker</div>
+    </div>
+    
+    <div class="container">
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn" onclick="showView('home')">🏠 Home</button>
+            <button class="btn" onclick="showView('status')">📊 All Lines Status</button>
+            <button class="btn" onclick="showModal('config')">⚙️ Configuration</button>
+            <button class="btn" onclick="showModal('history')">📜 Past Runs</button>
+        </div>
+        
+        <!-- Home: Line Selection -->
+        <div id="home" class="view active">
+            <h2 style="text-align: center; margin: 20px 0;">Select a Line</h2>
+            <div class="line-grid" id="lineGrid"></div>
+        </div>
+        
+        <!-- Line Detail -->
+        <div id="detail" class="view">
+            <button class="btn" onclick="showView('home')">← Back</button>
+            <h2 id="detailTitle" style="margin: 20px 0;"></h2>
+            <table class="detail-table" id="detailTable"></table>
+            <div class="comm-board">
+                <h3>📋 Communication Board - <span id="commLine"></span></h3>
+                <textarea class="note-input" id="noteInput" placeholder="Add notes, issues, or handoff information..." rows="3"></textarea>
+                <button class="btn" onclick="addNote()">Add Note</button>
+                <div class="notes-list" id="notesList"></div>
+            </div>
+        </div>
+        
+        <!-- Status Board -->
+        <div id="status" class="view">
+            <h2 style="text-align: center; margin: 20px 0;">All Lines Status Board</h2>
+            <table id="statusTable"></table>
+        </div>
+    </div>
+    
+    <!-- Config Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <h2>⚙️ Configuration</h2>
+            <h3 style="margin-top: 20px;">Lines</h3>
+            <div style="margin: 10px 0;"><input id="newLine" placeholder="Add line number" style="padding: 8px; background: #1a1a1a; border: 1px solid #666; color: white; border-radius: 4px; margin-right: 10px;"><button class="btn" onclick="addLine()">Add Line</button></div>
+            <div id="linesList" style="margin: 10px 0; color: #999;"></div>
+            <h3 style="margin-top: 20px;">Step Targets (minutes)</h3>
+            <div class="config-grid" id="stepsConfig"></div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" onclick="saveConfig()">Save</button>
+                <button class="btn" onclick="closeModal('config')">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <h2>📜 Past Runs</h2>
+            <div style="margin-bottom: 20px;">
+                <label style="margin-right: 10px;">Filter by Line:</label>
+                <select id="lineFilter" onchange="filterHistory()" style="padding: 8px; background: #1a1a1a; border: 1px solid #666; color: white; border-radius: 4px; margin-right: 10px;">
+                    <option value="all">All Lines</option>
+                </select>
+                <button class="btn" onclick="exportToExcel()">📄 Export to XLSX</button>
+            </div>
+            <div id="historyList"></div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" onclick="closeModal('history')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DateTime Picker Modal -->
+    <div id="datetimeModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2 id="datetimeTitle">Select Date & Time</h2>
+            <div class="datetime-picker">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; color: #d4af37;">Date:</label>
+                    <input type="date" id="datePicker" style="width: 100%;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; color: #d4af37;">Time:</label>
+                    <input type="time" id="timePicker" style="width: 100%;">
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" onclick="saveDatetime()">Save</button>
+                <button class="btn" onclick="closeModal('datetime')">Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const lines = ['1', '2', '5', '7', '9', '15', '16', '17', '18', '11', '12', '13', '14', '91', '92', '93', '21', '23', '24'];
+        const steps = [
+            { team: 'Operations', task: 'Line Cleaned and Released', avgMin: 45 },
+            { team: 'Maintenance', task: 'Remove bottle handling parts & screens', avgMin: 30 },
+            { team: 'Finish Wine', task: 'Caustic, Sterox, Cleanup', avgMin: 60 },
+            { team: 'Maintenance', task: 'Lubrication, Install Screens', avgMin: 40 },
+            { team: 'Sanitation', task: 'Deep Clean Filler, Line/Ph Swab', avgMin: 50 },
+            { team: 'Maintenance', task: 'Filler Checkout, Verify screens', avgMin: 25 },
+            { team: 'Sanitation', task: 'Hot Soap, Foam, SSP', avgMin: 35 },
+            { team: 'Finish Wine', task: 'Hot water Sanitation', avgMin: 45 },
+            { team: 'WAM Lab', task: 'ATP Swab', avgMin: 20 },
+            { team: 'Finished Wine', task: 'Pull Samples', avgMin: 15 },
+            { team: 'Warehouse', task: 'Material Ready', avgMin: 20 },
+            { team: 'Operations', task: 'Line Received Material', avgMin: 15 },
+            { team: 'Operations', task: 'HACCP/SSP/Start', avgMin: 30 }
+        ];
+        
+        let lineData = {}, notes = {}, currentLine = null, pastRuns = [], filteredRuns = [], lineStartTimes = {}, targetReadyTimes = {}, currentEditLine = null, currentEditType = null;
+        
+        function init() {
+            const now = new Date();
+            now.setHours(3, 30, 0, 0); // Set to 3:30 AM for demo purposes
+            lines.forEach((line, idx) => {
+                notes[line] = [];
+                lineStartTimes[line] = null;
+                targetReadyTimes[line] = null;
+                let cumTime = 0;
+                lineData[line] = steps.map((step, i) => {
+                    let status = 'not-started', start = null, end = null, duration = 0;
+                    const variance = Math.floor(Math.random() * 10) - 5;
+                    
+                    // Line 1: On track (will finish by 5:45 AM)
+                    if (idx === 0 && i < 10) { status = 'completed'; start = new Date(now - (11-i)*step.avgMin*60000); end = new Date(start.getTime() + (step.avgMin+variance)*60000); duration = Math.round((end-start)/60000); }
+                    else if (idx === 0 && i === 10) { status = 'in-progress'; start = new Date(now - 15*60000); }
+                    // Line 2: Behind schedule (will finish after 6 AM)
+                    else if (idx === 1 && i < 4) { status = 'completed'; start = new Date(now - (5-i)*(step.avgMin+15)*60000); end = new Date(start.getTime() + (step.avgMin+15)*60000); duration = Math.round((end-start)/60000); }
+                    else if (idx === 1 && i === 4) { status = 'in-progress'; start = new Date(now - 40*60000); }
+                    // Line 5: Way ahead (will finish by 5:00 AM)
+                    else if (idx === 2 && i < 11) { status = 'completed'; start = new Date(now - (12-i)*step.avgMin*60000); end = new Date(start.getTime() + (step.avgMin-5)*60000); duration = Math.round((end-start)/60000); }
+                    else if (idx === 2 && i === 11) { status = 'in-progress'; start = new Date(now - 5*60000); }
+                    // Line 7: Just started, on track
+                    else if (idx === 3 && i === 0) { status = 'in-progress'; start = new Date(now - 20*60000); }
+                    // Line 9: Just started, will be behind
+                    else if (idx === 4 && i === 0) { status = 'in-progress'; start = new Date(now - 60*60000); }
+                    
+                    return { ...step, status, start, end, duration, signedBy: '' };
+                });
+            });
+            renderLineGrid();
+        }
+        
+        function renderLineGrid() {
+            document.getElementById('lineGrid').innerHTML = lines.map(l => 
+                `<div class="line-card" onclick="showLineDetail('${l}')"><div class="number">L${l}</div></div>`
+            ).join('');
+        }
+        
+        function showLineDetail(line) {
+            currentLine = line;
+            document.getElementById('detailTitle').textContent = `Line ${line} - SNSU Process`;
+            document.getElementById('commLine').textContent = `Line ${line}`;
+            
+            let html = '<thead><tr><th>Step</th><th>Team</th><th>Task</th><th>Status</th><th>Start</th><th>End</th><th>Duration</th><th>Sign Off</th></tr></thead><tbody>';
+            lineData[line].forEach((s, i) => {
+                html += `<tr><td>${i+1}</td><td><strong>${s.team}</strong></td><td>${s.task}</td>`;
+                html += `<td class="status-${s.status}">${s.status === 'completed' ? '✓ Complete' : s.status === 'in-progress' ? '🔄 In Progress' : 'Not Started'}</td>`;
+                html += `<td>${s.start ? s.start.toLocaleTimeString() : '—'}</td>`;
+                html += `<td>${s.end ? s.end.toLocaleTimeString() : '—'}</td>`;
+                html += `<td class="duration">${s.duration ? s.duration + ' min' : '—'}</td>`;
+                html += `<td>`;
+                if (s.status === 'completed') {
+                    html += s.signedBy ? `<div class="signed">✓ ${s.signedBy}</div>` : 
+                            `<div class="signoff-box"><input id="sign-${i}" placeholder="Initials"><button onclick="signOff(${i})">Sign</button></div>`;
+                }
+                html += '</td></tr>';
+            });
+            html += '</tbody>';
+            document.getElementById('detailTable').innerHTML = html;
+            renderNotes();
+            showView('detail');
+        }
+        
+        function signOff(idx) {
+            const input = document.getElementById(`sign-${idx}`);
+            if (input.value.trim()) {
+                lineData[currentLine][idx].signedBy = input.value.trim();
+                showLineDetail(currentLine);
+            }
+        }
+        
+        function addNote() {
+            const input = document.getElementById('noteInput');
+            if (input.value.trim() && currentLine) {
+                notes[currentLine].unshift({ text: input.value.trim(), time: new Date().toLocaleString(), user: 'User' });
+                input.value = '';
+                renderNotes();
+            }
+        }
+        
+        function renderNotes() {
+            const list = document.getElementById('notesList');
+            list.innerHTML = (notes[currentLine] || []).map(n => 
+                `<div class="note"><div class="note-header"><span>${n.user}</span><span>${n.time}</span></div><div>${n.text}</div></div>`
+            ).join('');
+        }
+        
+        function showView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(view).classList.add('active');
+            if (view === 'status') renderStatus();
+        }
+        
+        function renderStatus() {
+            const now = new Date();
+            const targetTime = new Date(now);
+            targetTime.setHours(6, 0, 0, 0); // 6 AM target
+            if (targetTime < now) targetTime.setDate(targetTime.getDate() + 1); // Next day if past 6 AM
+            
+            let html = '<thead><tr><th>Line</th><th>Work Order Ended</th>';
+            steps.forEach(s => html += `<th>${s.team}<br><small>${s.task}</small></th>`);
+            html += '<th style="width: 180px;">Sign Off</th><th>Time Till Startup</th></tr></thead><tbody>';
+            
+            lines.forEach(line => {
+                const firstStep = lineData[line][0];
+                if (!lineStartTimes[line] && firstStep.start) lineStartTimes[line] = firstStep.start;
+                const lineStartTime = lineStartTimes[line] ? lineStartTimes[line].toLocaleString([], {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'}) : '—';
+                const inProgress = lineData[line].find(s => s.status === 'in-progress');
+                const elapsed = inProgress && inProgress.start ? Math.round((new Date() - inProgress.start)/60000) : 0;
+                const remainingInProgress = inProgress ? Math.max(0, inProgress.avgMin - elapsed) : 0;
+                const remaining = steps.reduce((sum, s, i) => sum + (lineData[line][i].status === 'not-started' ? s.avgMin : 0), 0) + remainingInProgress;
+                const expectedFinish = targetReadyTimes[line] || new Date(now.getTime() + remaining * 60000);
+                const finishTime = expectedFinish.toLocaleString([], {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
+                const isBehind = expectedFinish > targetTime;
+                const completedInitials = lineData[line].filter(s => s.status === 'completed' && s.signedBy && s.signedBy !== 'Auto').map(s => s.signedBy);
+                
+                html += `<tr><td style="font-weight:700; font-size:14px; background:#8b7355;" onclick="showLineDetail('${line}')">Line ${line}</td>`;
+                html += `<td style="font-weight:600; color:#d4af37; cursor:pointer;" onclick="editStartTime('${line}')">${lineStartTime}</td>`;
+                lineData[line].forEach((s, i) => {
+                    html += `<td class="status-${s.status}">`;
+                    if (s.status === 'completed') html += `✓<div class="time-badge">${s.signedBy || s.duration + 'm'}</div>`;
+                    else if (s.status === 'in-progress') {
+                        const elapsedTime = Math.round((new Date() - s.start) / 60000);
+                        html += `🔄<div class="time-badge">${elapsedTime}m</div>`;
+                    }
+                    else html += '—';
+                    html += '</td>';
+                });
+                html += `<td class="signoff-col"><button onclick="quickSignOff('${line}')">Sign</button>`;
+                if (completedInitials.length) html += `<div class="initials-list">${completedInitials.join(', ')}</div>`;
+                html += `</td>`;
+                html += `<td class="${isBehind ? 'time-behind' : 'time-on-track'}" style="font-size:14px; font-weight:600; cursor:pointer;" onclick="editReadyTime('${line}')">${remaining} min${isBehind ? ' ⚠️' : ''}<br><small style="font-size:11px; color:#999;">Ready: ${finishTime}</small></td></tr>`;
+            });
+            html += '</tbody>';
+            document.getElementById('statusTable').innerHTML = html;
+        }
+        
+        function editStartTime(line) {
+            currentEditLine = line;
+            currentEditType = 'start';
+            const current = lineStartTimes[line] || new Date();
+            document.getElementById('datePicker').value = current.toISOString().split('T')[0];
+            document.getElementById('timePicker').value = current.toTimeString().slice(0, 5);
+            document.getElementById('datetimeTitle').textContent = `Work Order Ended - Line ${line}`;
+            document.getElementById('datetimeModal').classList.add('active');
+        }
+        
+        function editReadyTime(line) {
+            currentEditLine = line;
+            currentEditType = 'ready';
+            const now = new Date();
+            const inProgress = lineData[line].find(s => s.status === 'in-progress');
+            const elapsed = inProgress && inProgress.start ? Math.round((new Date() - inProgress.start)/60000) : 0;
+            const remainingInProgress = inProgress ? Math.max(0, inProgress.avgMin - elapsed) : 0;
+            const remaining = steps.reduce((sum, s, i) => sum + (lineData[line][i].status === 'not-started' ? s.avgMin : 0), 0) + remainingInProgress;
+            const current = targetReadyTimes[line] || new Date(now.getTime() + remaining * 60000);
+            document.getElementById('datePicker').value = current.toISOString().split('T')[0];
+            document.getElementById('timePicker').value = current.toTimeString().slice(0, 5);
+            document.getElementById('datetimeTitle').textContent = `Ready Time - Line ${line}`;
+            document.getElementById('datetimeModal').classList.add('active');
+        }
+        
+        function saveDatetime() {
+            const date = document.getElementById('datePicker').value;
+            const time = document.getElementById('timePicker').value;
+            if (date && time) {
+                const newDate = new Date(`${date}T${time}`);
+                if (!isNaN(newDate.getTime())) {
+                    if (currentEditType === 'start') {
+                        lineStartTimes[currentEditLine] = newDate;
+                        if (lineData[currentEditLine][0].start) lineData[currentEditLine][0].start = newDate;
+                    } else if (currentEditType === 'ready') {
+                        targetReadyTimes[currentEditLine] = newDate;
+                    }
+                    closeModal('datetime');
+                    renderStatus();
+                }
+            }
+        }
+        
+        function quickSignOff(line) {
+            const currentStep = lineData[line].find(s => s.status === 'in-progress');
+            if (currentStep) {
+                currentStep.status = 'completed';
+                currentStep.end = new Date();
+                currentStep.duration = Math.round((currentStep.end - currentStep.start) / 60000);
+                currentStep.signedBy = 'Auto';
+                const nextIdx = lineData[line].indexOf(currentStep) + 1;
+                if (nextIdx < lineData[line].length) {
+                    lineData[line][nextIdx].status = 'in-progress';
+                    lineData[line][nextIdx].start = new Date();
+                }
+            }
+            renderStatus();
+        }
+        
+        function showModal(type) {
+            if (type === 'config') {
+                document.getElementById('linesList').innerHTML = lines.map(l => `<span style="display:inline-block; margin:5px; padding:5px 10px; background:#1a1a1a; border-radius:4px;">L${l}</span>`).join('');
+                document.getElementById('stepsConfig').innerHTML = steps.map((s, i) => 
+                    `<div class="config-row"><div>${s.team}</div><div>${s.task}</div><input type="number" id="target-${i}" value="${s.avgMin}" style="width:80px;"></div>`
+                ).join('');
+                document.getElementById('configModal').classList.add('active');
+            } else if (type === 'history') {
+                const filterSelect = document.getElementById('lineFilter');
+                filterSelect.innerHTML = '<option value="all">All Lines</option>' + 
+                    [...new Set(pastRuns.map(r => r.line))].sort((a,b) => a-b).map(l => `<option value="${l}">Line ${l}</option>`).join('');
+                filteredRuns = pastRuns;
+                renderHistoryList();
+                document.getElementById('historyModal').classList.add('active');
+            }
+        }
+        
+        function filterHistory() {
+            const filter = document.getElementById('lineFilter').value;
+            filteredRuns = filter === 'all' ? pastRuns : pastRuns.filter(r => r.line === filter);
+            renderHistoryList();
+        }
+        
+        function renderHistoryList() {
+            document.getElementById('historyList').innerHTML = filteredRuns.length ? filteredRuns.map((run, i) => 
+                `<div style="background:#1a1a1a; padding:15px; margin:10px 0; border-radius:6px; cursor:pointer;" onclick="viewRunDetail(${pastRuns.indexOf(run)})">
+                    <strong>Line ${run.line}</strong> - ${run.date}<br>
+                    <small>Total: ${run.total}min | Completed: ${run.completed}/${steps.length} steps</small>
+                </div>`
+            ).join('') : '<p style="color:#999; text-align:center;">No past runs found</p>';
+        }
+        
+        function viewRunDetail(idx) {
+            const run = pastRuns[idx];
+            let html = `<div style="background:#1a1a1a; padding:20px; border-radius:8px; margin:20px 0;">`;
+            html += `<h3 style="color:#d4af37; margin-bottom:15px;">Line ${run.line} - ${run.date}</h3>`;
+            html += `<table style="width:100%; font-size:12px;"><thead><tr><th>Step</th><th>Team</th><th>Task</th><th>Status</th><th>Duration</th><th>Signed By</th></tr></thead><tbody>`;
+            run.data.forEach((s, i) => {
+                html += `<tr><td>${i+1}</td><td><strong>${s.team}</strong></td><td>${s.task}</td>`;
+                html += `<td class="status-${s.status}">${s.status === 'completed' ? '✓ Complete' : s.status === 'in-progress' ? '🔄 In Progress' : 'Not Started'}</td>`;
+                html += `<td>${s.duration ? s.duration + ' min' : '—'}</td>`;
+                html += `<td>${s.signedBy || '—'}</td></tr>`;
+            });
+            html += `</tbody></table></div>`;
+            document.getElementById('historyList').innerHTML = html + '<button class="btn" onclick="filterHistory()" style="margin-top:10px;">← Back to List</button>';
+        }
+        
+        function exportToExcel() {
+            let csv = 'Line,Date,Step,Team,Task,Status,Target (min),Duration (min),Signed By\n';
+            filteredRuns.forEach(run => {
+                run.data.forEach((s, i) => {
+                    csv += `${run.line},${run.date},${i+1},${s.team},"${s.task}",${s.status},${s.avgMin},${s.duration || ''},${s.signedBy || ''}\n`;
+                });
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SNSU_History_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function closeModal(type) {
+            if (type === 'datetime') {
+                document.getElementById('datetimeModal').classList.remove('active');
+                currentEditLine = null;
+                currentEditType = null;
+            } else {
+                document.getElementById(type === 'config' ? 'configModal' : 'historyModal').classList.remove('active');
+            }
+        }
+        
+        function addLine() {
+            const input = document.getElementById('newLine');
+            if (input.value.trim() && !lines.includes(input.value.trim())) {
+                lines.push(input.value.trim());
+                lineData[input.value.trim()] = steps.map(s => ({ ...s, status: 'not-started', start: null, end: null, duration: 0, signedBy: '' }));
+                notes[input.value.trim()] = [];
+                input.value = '';
+                renderLineGrid();
+                showModal('config');
+            }
+        }
+        
+        function saveConfig() {
+            steps.forEach((s, i) => {
+                const val = parseInt(document.getElementById(`target-${i}`).value);
+                if (val > 0) s.avgMin = val;
+            });
+            closeModal('config');
+        }
+        
+        function loadPastRun(idx) {
+            const run = pastRuns[idx];
+            if (confirm(`Load past run for Line ${run.line} from ${run.date} into current tracker?`)) {
+                lineData[run.line] = JSON.parse(JSON.stringify(run.data));
+                closeModal('history');
+                showLineDetail(run.line);
+            }
+        }
+        
+        // Save past runs demo data
+        init();
+        
+        pastRuns = [
+            { line: '1', date: '2025-01-12 22:00', total: 420, completed: 13, data: JSON.parse(JSON.stringify(lineData['1'])) },
+            { line: '2', date: '2025-01-05 22:00', total: 395, completed: 11, data: JSON.parse(JSON.stringify(lineData['2'])) },
+            { line: '1', date: '2025-01-06 22:00', total: 410, completed: 13, data: JSON.parse(JSON.stringify(lineData['1'])) },
+            { line: '5', date: '2025-01-10 22:00', total: 380, completed: 12, data: JSON.parse(JSON.stringify(lineData['5'])) }
+        ];
+        filteredRuns = pastRuns;
+    </script>
+</body>
+</html>
