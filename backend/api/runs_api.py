@@ -26,7 +26,8 @@ class RunUpdate(BaseModel):
 def create_run(run: RunCreate):
     try:
         run_id = run_repo.create(run.line_id, run.work_order_end_time, run.target_ready_time, run.status)
-        return {"message": "Run created", "data": {"run_id": run_id}}
+        created_run = run_repo.get_by_id(run_id)
+        return {"message": "Run created", "data": created_run}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
