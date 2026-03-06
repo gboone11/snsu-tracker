@@ -1,10 +1,12 @@
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from database import Database
+from database.connection import Database
+from database.line_group_repository import LineGroupRepository
 
 router = APIRouter()
 db = Database()
+line_group_repo = LineGroupRepository(db)
 
 
 class LineGroupCreate(BaseModel):

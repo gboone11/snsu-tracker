@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database.connection import Database
 from api.user_api import router as user_router
+from api.line_groups_api import router as line_groups_router
+from api.lines_api import router as lines_router
 
 app = FastAPI(title="SNSU Tracker API", version="1.0.0")
 
@@ -24,6 +26,8 @@ class ApiResponse(BaseModel):
 db = Database()
 
 app.include_router(user_router)
+app.include_router(line_groups_router)
+app.include_router(lines_router)
 
 
 @app.post("/clear-data", response_model=ApiResponse)

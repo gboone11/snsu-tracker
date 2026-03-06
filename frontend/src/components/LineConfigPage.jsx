@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -10,13 +10,37 @@ import CloseIcon from '@mui/icons-material/Close';
 import { apiService } from '../services/api';
 
 function LineConfigPage() {
-  const [groups, setGroups] = useState({
-    '24-5': ['1', '2', '5', '7', '9', '15', '16', '17', '18'],
-    '24-7': ['11', '12', '13', '14', '91', '92', '93'],
-    'spirits': ['21', '23', '24']
-  });
+  const [groups, setGroups] = useState({});
   const [newGroupName, setNewGroupName] = useState('');
   const [newLineInputs, setNewLineInputs] = useState({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [groupsRes, linesRes] = await Promise.all([
+          apiService.lineGroups.getAll(),
+          apiService.lines.getAll()
+        ]);
+        
+        const groupsData = {};
+        groupsRes.data.data.forEach(group => {
+          groupsData[group.group_name] = [];
+        });
+        
+        linesRes.data.data.forEach(line => {
+          const groupName = groupsRes.data.data.find(g => g.group_id === line.line_group_id)?.group_name;
+          if (groupName && groupsData[groupName]) {
+            groupsData[groupName].push(line.line_number);
+          }
+        });
+        
+        setGroups(groupsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -34,37 +58,65 @@ function LineConfigPage() {
     }
   };
 
-  const handleDeleteGroup = (groupName) => {
+  const handleDeleteGroup = async (groupName) => {
     if (!window.confirm(`Delete group "${groupName}" and all its lines?`)) return;
-    const newGroups = { ...groups };
-    delete newGroups[groupName];
-    setGroups(newGroups);
+    
+    try {
+      const groupsRes = await apiService.lineGroups.getAll();
+      const group = groupsRes.data.data.find(g => g.group_name === groupName);
+      if (group) {
+        await apiService.lineGroups.delete(group.group_id);
+        const newGroups = { ...groups };
+        delete newGroups[groupName];
+        setGroups(newGroups);
+      }
+    } catch (error) {
+      alert('Error deleting group: ' + error.message);
+    }
   };
 
-  const handleAddLine = (groupName) => {
+  const handleAddLine = async (groupName) => {
     const lineNum = newLineInputs[groupName]?.trim();
     if (!lineNum) return;
     
-    // Check if line exists in any group
     const lineExists = Object.values(groups).some(lines => lines.includes(lineNum));
     if (lineExists) {
       alert('Line already exists');
       return;
     }
 
-    setGroups({
-      ...groups,
-      [groupName]: [...groups[groupName], lineNum]
-    });
-    setNewLineInputs({ ...newLineInputs, [groupName]: '' });
+    try {
+      const groupsRes = await apiService.lineGroups.getAll();
+      const group = groupsRes.data.data.find(g => g.group_name === groupName);
+      if (group) {
+        await apiService.lines.create({ line_number: lineNum, line_group_id: group.group_id });
+        setGroups({
+          ...groups,
+          [groupName]: [...groups[groupName], lineNum]
+        });
+        setNewLineInputs({ ...newLineInputs, [groupName]: '' });
+      }
+    } catch (error) {
+      alert('Error adding line: ' + error.message);
+    }
   };
 
-  const handleRemoveLine = (groupName, lineNum) => {
+  const handleRemoveLine = async (groupName, lineNum) => {
     if (!window.confirm(`Remove Line ${lineNum} from group "${groupName}"?`)) return;
-    setGroups({
-      ...groups,
-      [groupName]: groups[groupName].filter(l => l !== lineNum)
-    });
+    
+    try {
+      const linesRes = await apiService.lines.getAll();
+      const line = linesRes.data.data.find(l => l.line_number === lineNum);
+      if (line) {
+        await apiService.lines.delete(line.line_id);
+        setGroups({
+          ...groups,
+          [groupName]: groups[groupName].filter(l => l !== lineNum)
+        });
+      }
+    } catch (error) {
+      alert('Error removing line: ' + error.message);
+    }
   };
 
   return (
