@@ -17,6 +17,10 @@ import { apiService } from '../services/api';
 function LinesStatusBoard() {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('');
+  const [lines, setLines] = useState([]);
+  const [runs, setRuns] = useState([]);
+  const [steps, setSteps] = useState([]);
+  const [executions, setExecutions] = useState([]);
 
   useEffect(() => {
     const fetchGroups = async () => {
@@ -32,6 +36,45 @@ function LinesStatusBoard() {
     };
     fetchGroups();
   }, []);
+
+  useEffect(() => {
+    if (!selectedGroup) return;
+    const fetchData = async () => {
+      try {
+        const [linesRes, runsRes, stepsRes] = await Promise.all([
+          apiService.lines.getAll(),
+          apiService.runs.getActive(),
+          apiService.processSteps.getByGroup(selectedGroup)
+        ]);
+        const groupLines = linesRes.data.data.filter(l => l.line_group_id === selectedGroup);
+        setLines(groupLines);
+        setRuns(runsRes.data.data);
+        setSteps(stepsRes.data.data);
+        
+        const allExecutions = [];
+        for (const run of runsRes.data.data) {
+          const execRes = await apiService.stepExecutions.getByRun(run.run_id);
+          allExecutions.push(...execRes.data.data);
+        }
+        setExecutions(allExecutions);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, [selectedGroup]);
+
+  const getStepStatus = (lineId, stepIndex) => {
+    const run = runs.find(r => r.line_id === lineId);
+    if (!run) return '';
+    const step = steps[stepIndex];
+    if (!step) return '';
+    const execution = executions.find(e => e.run_id === run.run_id && e.step_id === step.step_id);
+    if (!execution) return '';
+    if (execution.status === 'completed') return 'green';
+    if (execution.status === 'in_progress') return 'yellow';
+    return '';
+  };
 
   return (
     <Paper sx={{ p: 2 }}>
@@ -77,7 +120,25 @@ function LinesStatusBoard() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {/* Table rows will go here */}
+            {lines.map((line) => {
+              const run = runs.find(r => r.line_id === line.line_id);
+              return (
+                <TableRow key={line.line_id}>
+                  <TableCell>{line.line_number}</TableCell>
+                  <TableCell>{run?.work_order_end_time || '-'}</TableCell>
+                  {[...Array(13)].map((_, i) => (
+                    <TableCell 
+                      key={i}
+                      sx={{ 
+                        bgcolor: getStepStatus(line.line_id, i) === 'green' ? 'success.light' : 
+                                getStepStatus(line.line_id, i) === 'yellow' ? 'warning.light' : 'transparent'
+                      }}
+                    />
+                  ))}
+                  <TableCell>{run?.target_ready_time || '-'}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>

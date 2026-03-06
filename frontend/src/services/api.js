@@ -22,4 +22,27 @@ export const apiService = {
     update: (id, data) => api.put(`/lines/${id}`, data),
     delete: (id) => api.delete(`/lines/${id}`)
   },
+  runs: {
+    create: (data) => api.post('/runs', data),
+    getAll: () => api.get('/runs'),
+    getActive: () => api.get('/runs/active'),
+    getById: (id) => api.get(`/runs/${id}`),
+    update: (id, data) => api.put(`/runs/${id}`, data),
+    delete: (id) => api.delete(`/runs/${id}`)
+  },
+  processSteps: {
+    create: (data) => api.post('/process-steps', data),
+    getAll: () => api.get('/process-steps'),
+    getByGroup: (groupId) => api.get(`/process-steps/group/${groupId}`),
+    getById: (id) => api.get(`/process-steps/${id}`),
+    update: (id, data) => api.put(`/process-steps/${id}`, data),
+    delete: (id) => api.delete(`/process-steps/${id}`)
+  },
+  stepExecutions: {
+    create: (data) => api.post('/step-executions', data),
+    getByRun: (runId) => api.get(`/step-executions/run/${runId}`),
+    getById: (id) => api.get(`/step-executions/${id}`),
+    update: (id, data) => api.put(`/step-executions/${id}`, data),
+    delete: (id) => api.delete(`/step-executions/${id}`)
+  },
 };

@@ -40,7 +40,7 @@ class Database:
                     line_number TEXT UNIQUE NOT NULL,
                     line_group_id INTEGER NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (line_group_id) REFERENCES line_groups(group_id)
+                    FOREIGN KEY (line_group_id) REFERENCES line_groups(group_id) ON DELETE CASCADE
                 );
                 
                 CREATE TABLE IF NOT EXISTS process_steps (

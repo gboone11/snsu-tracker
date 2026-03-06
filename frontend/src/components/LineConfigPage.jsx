@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -13,6 +13,34 @@ function LineConfigPage() {
   const [groups, setGroups] = useState({});
   const [newGroupName, setNewGroupName] = useState('');
   const [newLineInputs, setNewLineInputs] = useState({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [groupsRes, linesRes] = await Promise.all([
+          apiService.lineGroups.getAll(),
+          apiService.lines.getAll()
+        ]);
+        
+        const groupsData = {};
+        groupsRes.data.data.forEach(group => {
+          groupsData[group.group_name] = [];
+        });
+        
+        linesRes.data.data.forEach(line => {
+          const groupName = groupsRes.data.data.find(g => g.group_id === line.line_group_id)?.group_name;
+          if (groupName && groupsData[groupName]) {
+            groupsData[groupName].push(line.line_number);
+          }
+        });
+        
+        setGroups(groupsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
