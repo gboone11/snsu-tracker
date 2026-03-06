@@ -24,6 +24,7 @@ An MES tool/board to track Weekend Ops with tasks, progress, and delay communica
 - UI separate by shift hours and Spirits
 - Usable by mobile (IPhone 12+, MS Surface)
 - OPTIONAL Automated Notification (MS Teams)
+- TV Screen View
 
 ## Failures to mitigate:
 
