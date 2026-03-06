@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from fastapi.testclient import TestClient
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from api import app, db
 from api_routers.user_api import user_repo
