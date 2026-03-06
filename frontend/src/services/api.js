@@ -15,4 +15,11 @@ export const apiService = {
     return response;
   },
 
+  lineGroups: {
+    create: (data) => api.post('/line-groups', data),
+    getAll: () => api.get('/line-groups'),
+    getById: (id) => api.get(`/line-groups/${id}`),
+    update: (id, data) => api.put(`/line-groups/${id}`, data),
+    delete: (id) => api.delete(`/line-groups/${id}`)
+  }
 };
