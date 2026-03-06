@@ -22,7 +22,6 @@ class ProcessStepUpdate(BaseModel):
     team_name: Optional[str] = None
     task_name: Optional[str] = None
     avg_duration_minutes: Optional[int] = None
-    is_active: Optional[int] = None
 
 
 @router.post("/process-steps")

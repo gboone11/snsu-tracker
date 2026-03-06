@@ -17,7 +17,6 @@ class LineCreate(BaseModel):
 class LineUpdate(BaseModel):
     line_number: Optional[str] = None
     line_group_id: Optional[int] = None
-    is_active: Optional[int] = None
 
 
 @router.post("/lines")

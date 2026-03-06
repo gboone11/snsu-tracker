@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Table from '@mui/material/Table';
@@ -6,13 +7,53 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Box from '@mui/material/Box';
+import { apiService } from '../services/api';
 
 function LinesStatusBoard() {
+  const [groups, setGroups] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState('');
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const response = await apiService.lineGroups.getAll();
+        setGroups(response.data.data);
+        if (response.data.data.length > 0) {
+          setSelectedGroup(response.data.data[0].group_id);
+        }
+      } catch (error) {
+        console.error('Error fetching groups:', error);
+      }
+    };
+    fetchGroups();
+  }, []);
+
   return (
     <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-        Lines Status Board
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          Lines Status Board
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel>Group</InputLabel>
+          <Select
+            value={selectedGroup}
+            label="Group"
+            onChange={(e) => setSelectedGroup(e.target.value)}
+          >
+            {groups.map((group) => (
+              <MenuItem key={group.group_id} value={group.group_id}>
+                {group.group_name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
       <TableContainer>
         <Table size="small">
           <TableHead>

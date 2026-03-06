@@ -16,7 +16,7 @@ class ChecklistItemRepository:
     def get_by_template(self, template_id: int) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
-                "SELECT * FROM checklist_items WHERE template_id = ? AND is_active = 1 ORDER BY item_order",
+                "SELECT * FROM checklist_items WHERE template_id = ? ORDER BY item_order",
                 (template_id,)
             )
             return [dict(row) for row in cursor.fetchall()]

@@ -15,7 +15,7 @@ class UserRepository:
 
     def get_all(self) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
-            cursor = conn.execute("SELECT * FROM users WHERE is_active = 1")
+            cursor = conn.execute("SELECT * FROM users")
             return [dict(row) for row in cursor.fetchall()]
 
     def get_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
@@ -36,9 +36,4 @@ class UserRepository:
     def delete(self, user_id: int) -> bool:
         with self.db.get_connection() as conn:
             cursor = conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
-            return cursor.rowcount > 0
-
-    def deactivate(self, user_id: int) -> bool:
-        with self.db.get_connection() as conn:
-            cursor = conn.execute("UPDATE users SET is_active = 0 WHERE user_id = ?", (user_id,))
             return cursor.rowcount > 0

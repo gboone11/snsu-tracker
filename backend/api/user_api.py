@@ -20,7 +20,6 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     initials: Optional[str] = None
     team_name: Optional[str] = None
-    is_active: Optional[int] = None
 
 
 @router.post("/users")
@@ -64,11 +63,3 @@ def delete_user(user_id: int):
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
     return {"message": "User deleted"}
-
-
-@router.post("/users/{user_id}/deactivate")
-def deactivate_user(user_id: int):
-    success = user_repo.deactivate(user_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User deactivated"}

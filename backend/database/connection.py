@@ -32,7 +32,6 @@ class Database:
                     group_name TEXT UNIQUE NOT NULL,
                     description TEXT,
                     target_ready_time TEXT,
-                    is_active INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 
@@ -40,7 +39,6 @@ class Database:
                     line_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     line_number TEXT UNIQUE NOT NULL,
                     line_group_id INTEGER NOT NULL,
-                    is_active INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (line_group_id) REFERENCES line_groups(group_id)
                 );
@@ -52,7 +50,6 @@ class Database:
                     team_name TEXT NOT NULL,
                     task_name TEXT NOT NULL,
                     avg_duration_minutes INTEGER,
-                    is_active INTEGER DEFAULT 1,
                     FOREIGN KEY (group_id) REFERENCES line_groups(group_id)
                 );
                 
@@ -96,7 +93,6 @@ class Database:
                     template_id INTEGER NOT NULL,
                     item_order INTEGER NOT NULL,
                     item_text TEXT NOT NULL,
-                    is_active INTEGER DEFAULT 1,
                     FOREIGN KEY (template_id) REFERENCES checklist_templates(template_id)
                 );
                 
@@ -128,7 +124,6 @@ class Database:
                     full_name TEXT NOT NULL,
                     initials TEXT NOT NULL,
                     team_name TEXT NOT NULL,
-                    is_active INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 
@@ -143,13 +138,14 @@ class Database:
 
     def clear_data(self) -> None:
         with self.get_connection() as conn:
-            conn.execute("DELETE FROM checklist_completions")
-            conn.execute("DELETE FROM checklist_items")
-            conn.execute("DELETE FROM checklist_templates")
-            conn.execute("DELETE FROM step_executions")
-            conn.execute("DELETE FROM communication_notes")
-            conn.execute("DELETE FROM runs")
-            conn.execute("DELETE FROM process_steps")
-            conn.execute("DELETE FROM lines")
-            conn.execute("DELETE FROM line_groups")
-            conn.execute("DELETE FROM users")
+            conn.execute("DROP TABLE IF EXISTS checklist_completions")
+            conn.execute("DROP TABLE IF EXISTS checklist_items")
+            conn.execute("DROP TABLE IF EXISTS checklist_templates")
+            conn.execute("DROP TABLE IF EXISTS step_executions")
+            conn.execute("DROP TABLE IF EXISTS communication_notes")
+            conn.execute("DROP TABLE IF EXISTS runs")
+            conn.execute("DROP TABLE IF EXISTS process_steps")
+            conn.execute("DROP TABLE IF EXISTS lines")
+            conn.execute("DROP TABLE IF EXISTS line_groups")
+            conn.execute("DROP TABLE IF EXISTS users")
+        self._init_db()

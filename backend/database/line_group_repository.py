@@ -15,7 +15,7 @@ class LineGroupRepository:
 
     def get_all(self) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
-            cursor = conn.execute("SELECT * FROM line_groups WHERE is_active = 1")
+            cursor = conn.execute("SELECT * FROM line_groups")
             return [dict(row) for row in cursor.fetchall()]
 
     def get_by_id(self, group_id: int) -> Optional[Dict[str, Any]]:

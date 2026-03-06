@@ -19,7 +19,6 @@ class LineGroupUpdate(BaseModel):
     group_name: Optional[str] = None
     description: Optional[str] = None
     target_ready_time: Optional[str] = None
-    is_active: Optional[int] = None
 
 @router.post("/line-groups")
 def create_line_group(line_group: LineGroupCreate):

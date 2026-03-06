@@ -15,13 +15,13 @@ class ProcessStepRepository:
 
     def get_all(self) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
-            cursor = conn.execute("SELECT * FROM process_steps WHERE is_active = 1 ORDER BY step_order")
+            cursor = conn.execute("SELECT * FROM process_steps ORDER BY step_order")
             return [dict(row) for row in cursor.fetchall()]
 
     def get_by_group(self, group_id: int) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
-                "SELECT * FROM process_steps WHERE group_id = ? AND is_active = 1 ORDER BY step_order",
+                "SELECT * FROM process_steps WHERE group_id = ? ORDER BY step_order",
                 (group_id,)
             )
             return [dict(row) for row in cursor.fetchall()]

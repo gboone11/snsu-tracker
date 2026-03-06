@@ -18,7 +18,6 @@ class ChecklistItemCreate(BaseModel):
 class ChecklistItemUpdate(BaseModel):
     item_order: Optional[int] = None
     item_text: Optional[str] = None
-    is_active: Optional[int] = None
 
 
 @router.post("/checklist-items")
