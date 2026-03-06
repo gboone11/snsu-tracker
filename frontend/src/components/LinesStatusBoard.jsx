@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Table from '@mui/material/Table';
@@ -15,6 +16,7 @@ import Box from '@mui/material/Box';
 import { apiService } from '../services/api';
 
 function LinesStatusBoard() {
+  const navigate = useNavigate();
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState('');
   const [lines, setLines] = useState([]);
@@ -43,7 +45,7 @@ function LinesStatusBoard() {
       try {
         const [linesRes, runsRes, stepsRes] = await Promise.all([
           apiService.lines.getAll(),
-          apiService.runs.getActive(),
+          apiService.runs.getAll(),
           apiService.processSteps.getByGroup(selectedGroup)
         ]);
         const groupLines = linesRes.data.data.filter(l => l.line_group_id === selectedGroup);
@@ -66,14 +68,14 @@ function LinesStatusBoard() {
 
   const getStepStatus = (lineId, stepIndex) => {
     const run = runs.find(r => r.line_id === lineId);
-    if (!run) return '';
+    if (!run) return { color: '', text: '' };
     const step = steps[stepIndex];
-    if (!step) return '';
+    if (!step) return { color: '', text: '' };
     const execution = executions.find(e => e.run_id === run.run_id && e.step_id === step.step_id);
-    if (!execution) return '';
-    if (execution.status === 'completed') return 'green';
-    if (execution.status === 'in_progress') return 'yellow';
-    return '';
+    if (!execution) return { color: '', text: '' };
+    if (execution.status === 'completed') return { color: 'green', text: execution.signed_by || '✓' };
+    if (execution.status === 'in_progress') return { color: 'yellow', text: 'In Progress' };
+    return { color: '', text: '' };
   };
 
   return (
@@ -103,19 +105,11 @@ function LinesStatusBoard() {
             <TableRow>
               <TableCell>Line</TableCell>
               <TableCell>Work Order Ended</TableCell>
-              <TableCell>Operations<br /><small>Line Cleaned and Released</small></TableCell>
-              <TableCell>Maintenance<br /><small>Remove bottle handling parts & screens</small></TableCell>
-              <TableCell>Finish Wine<br /><small>Caustic, Sterox, Cleanup</small></TableCell>
-              <TableCell>Maintenance<br /><small>Lubrication, Install Screens</small></TableCell>
-              <TableCell>Sanitation<br /><small>Deep Clean Filler, Line/Ph Swab</small></TableCell>
-              <TableCell>Maintenance<br /><small>Filler Checkout, Verify screens</small></TableCell>
-              <TableCell>Sanitation<br /><small>Hot Soap, Foam, SSP</small></TableCell>
-              <TableCell>Finish Wine<br /><small>Hot water Sanitation</small></TableCell>
-              <TableCell>WAM Lab<br /><small>ATP Swab</small></TableCell>
-              <TableCell>Finished Wine<br /><small>Pull Samples</small></TableCell>
-              <TableCell>Warehouse<br /><small>Material Ready</small></TableCell>
-              <TableCell>Operations<br /><small>Line Received Material</small></TableCell>
-              <TableCell>Operations<br /><small>HACCP/SSP/Start</small></TableCell>
+              {steps.map((step) => (
+                <TableCell key={step.step_id}>
+                  {step.team_name}<br /><small>{step.task_name}</small>
+                </TableCell>
+              ))}
               <TableCell>Time Till Startup</TableCell>
             </TableRow>
           </TableHead>
@@ -124,18 +118,28 @@ function LinesStatusBoard() {
               const run = runs.find(r => r.line_id === line.line_id);
               return (
                 <TableRow key={line.line_id}>
-                  <TableCell>{line.line_number}</TableCell>
-                  <TableCell>{run?.work_order_end_time || '-'}</TableCell>
-                  {[...Array(13)].map((_, i) => (
-                    <TableCell 
-                      key={i}
-                      sx={{ 
-                        bgcolor: getStepStatus(line.line_id, i) === 'green' ? 'success.light' : 
-                                getStepStatus(line.line_id, i) === 'yellow' ? 'warning.light' : 'transparent'
-                      }}
-                    />
-                  ))}
-                  <TableCell>{run?.target_ready_time || '-'}</TableCell>
+                  <TableCell 
+                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
+                    onClick={() => navigate(`/line/${line.line_id}`)}
+                  >
+                    {line.line_number}
+                  </TableCell>
+                  <TableCell>{'-'}</TableCell>
+                  {steps.map((step, i) => {
+                    const status = getStepStatus(line.line_id, i);
+                    return (
+                      <TableCell 
+                        key={step.step_id}
+                        sx={{ 
+                          bgcolor: status.color === 'green' ? '#c8e6c9' : 
+                                  status.color === 'yellow' ? '#fff9c4' : 'transparent'
+                        }}
+                      >
+                        {status.text}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell>{'-'}</TableCell>
                 </TableRow>
               );
             })}
