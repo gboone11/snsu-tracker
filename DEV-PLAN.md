@@ -2,13 +2,13 @@
 
 ## Backend
 
-- [ ] Project Database Interface
+- [x] Project Database Interface
 - [ ] Simulated MES API
-- [ ] API Endpoints for Front
+- [x] API Endpoints for Front
 
 ## Frontend
 
-- [ ] All Line View
-- [ ] Sign off sheet
-- [ ] Config Menu
+- [x] All Line View
+- [x] Sign off sheet
+- [x] Config Menu
 
