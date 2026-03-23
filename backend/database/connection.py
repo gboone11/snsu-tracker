@@ -107,15 +107,6 @@ class Database:
                     FOREIGN KEY (run_id) REFERENCES runs(run_id)
                 );
                 
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    full_name TEXT NOT NULL,
-                    initials TEXT NOT NULL,
-                    team_name TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                
                 CREATE INDEX IF NOT EXISTS idx_steps_order ON process_steps(step_order);
                 CREATE INDEX IF NOT EXISTS idx_runs_line ON runs(line_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_executions_run ON step_executions(run_id, step_id);
@@ -134,5 +125,5 @@ class Database:
             conn.execute("DROP TABLE IF EXISTS runs")
             conn.execute("DROP TABLE IF EXISTS process_steps")
             conn.execute("DROP TABLE IF EXISTS lines")
-            conn.execute("DROP TABLE IF EXISTS users")
+
         self._init_db()

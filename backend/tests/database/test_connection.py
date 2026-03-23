@@ -19,7 +19,7 @@ class TestDatabase(unittest.TestCase):
         expected_tables = [
             'lines', 'process_steps', 'runs', 'step_executions',
             'checklist_templates', 'checklist_items', 'checklist_completions',
-            'communication_notes', 'users'
+            'communication_notes'
         ]
         
         with self.db.get_connection() as conn:
@@ -48,12 +48,12 @@ class TestDatabase(unittest.TestCase):
 
     def test_clear_data_removes_all_records(self):
         with self.db.get_connection() as conn:
-            conn.execute("INSERT INTO users (username, full_name, initials, team_name) VALUES ('test', 'Test User', 'TU', 'Ops')")
+            conn.execute("INSERT INTO lines (line_number) VALUES ('Line 1')")
         
         self.db.clear_data()
         
         with self.db.get_connection() as conn:
-            cursor = conn.execute("SELECT COUNT(*) FROM users")
+            cursor = conn.execute("SELECT COUNT(*) FROM lines")
             self.assertEqual(cursor.fetchone()[0], 0)
 
 

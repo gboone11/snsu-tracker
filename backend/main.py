@@ -3,7 +3,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database.connection import Database
-from api.user_api import router as user_router
 from api.lines_api import router as lines_router
 from api.runs_api import router as runs_router
 from api.process_steps_api import router as process_steps_router
@@ -27,7 +26,6 @@ class ApiResponse(BaseModel):
 
 db = Database()
 
-app.include_router(user_router)
 app.include_router(lines_router)
 app.include_router(runs_router)
 app.include_router(process_steps_router)
