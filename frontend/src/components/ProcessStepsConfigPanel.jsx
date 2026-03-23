@@ -106,7 +106,7 @@ function ProcessStepsConfigPanel() {
           placeholder="Step description"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleAdd()}
+          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           sx={{ width: 250 }}
         />
         <Button variant="contained" onClick={handleAdd}>

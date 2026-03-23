@@ -74,7 +74,7 @@ function LinesConfigPanel() {
           placeholder="Line number (e.g., 101)"
           value={newLine}
           onChange={(e) => setNewLine(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleAdd()}
+          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           sx={{ width: 250 }}
         />
         <Button variant="contained" onClick={handleAdd}>
