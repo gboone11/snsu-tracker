@@ -68,60 +68,15 @@ class Database:
                     FOREIGN KEY (step_id) REFERENCES process_steps(step_id)
                 );
                 
-                CREATE TABLE IF NOT EXISTS checklist_templates (
-                    template_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    team_name TEXT NOT NULL,
-                    task_name TEXT NOT NULL,
-                    is_custom INTEGER DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                
-                CREATE TABLE IF NOT EXISTS checklist_items (
-                    item_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    template_id INTEGER NOT NULL,
-                    item_order INTEGER NOT NULL,
-                    item_text TEXT NOT NULL,
-                    FOREIGN KEY (template_id) REFERENCES checklist_templates(template_id)
-                );
-                
-                CREATE TABLE IF NOT EXISTS checklist_completions (
-                    completion_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    execution_id INTEGER NOT NULL,
-                    item_id INTEGER NOT NULL,
-                    is_completed INTEGER DEFAULT 0,
-                    completed_by TEXT,
-                    completed_at TIMESTAMP,
-                    FOREIGN KEY (execution_id) REFERENCES step_executions(execution_id),
-                    FOREIGN KEY (item_id) REFERENCES checklist_items(item_id)
-                );
-                
-                CREATE TABLE IF NOT EXISTS communication_notes (
-                    note_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    line_id INTEGER NOT NULL,
-                    run_id INTEGER,
-                    note_text TEXT NOT NULL,
-                    created_by TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (line_id) REFERENCES lines(line_id),
-                    FOREIGN KEY (run_id) REFERENCES runs(run_id)
-                );
-                
                 CREATE INDEX IF NOT EXISTS idx_steps_order ON process_steps(step_order);
                 CREATE INDEX IF NOT EXISTS idx_runs_line ON runs(line_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_executions_run ON step_executions(run_id, step_id);
-                CREATE INDEX IF NOT EXISTS idx_notes_line ON communication_notes(line_id, created_at DESC);
-                CREATE INDEX IF NOT EXISTS idx_checklist_template ON checklist_items(template_id, item_order);
             """
             )
 
     def clear_data(self) -> None:
         with self.get_connection() as conn:
-            conn.execute("DROP TABLE IF EXISTS checklist_completions")
-            conn.execute("DROP TABLE IF EXISTS checklist_items")
-            conn.execute("DROP TABLE IF EXISTS checklist_templates")
             conn.execute("DROP TABLE IF EXISTS step_executions")
-            conn.execute("DROP TABLE IF EXISTS communication_notes")
             conn.execute("DROP TABLE IF EXISTS runs")
             conn.execute("DROP TABLE IF EXISTS process_steps")
             conn.execute("DROP TABLE IF EXISTS lines")

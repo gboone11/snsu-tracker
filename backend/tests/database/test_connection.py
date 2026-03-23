@@ -17,9 +17,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_init_db_creates_all_tables(self):
         expected_tables = [
-            'lines', 'process_steps', 'runs', 'step_executions',
-            'checklist_templates', 'checklist_items', 'checklist_completions',
-            'communication_notes'
+            'lines', 'process_steps', 'runs', 'step_executions'
         ]
         
         with self.db.get_connection() as conn:
@@ -34,7 +32,7 @@ class TestDatabase(unittest.TestCase):
     def test_init_db_creates_indexes(self):
         expected_indexes = [
             'idx_steps_order', 'idx_runs_line',
-            'idx_executions_run', 'idx_notes_line', 'idx_checklist_template'
+            'idx_executions_run'
         ]
         
         with self.db.get_connection() as conn:

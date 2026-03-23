@@ -50,10 +50,6 @@ http://127.0.0.1:8000
 - `process_steps` - Workflow steps
 - `runs` - Startup run instances
 - `step_executions` - Step completion tracking
-- `checklist_templates` - Reusable checklists
-- `checklist_items` - Individual checklist items
-- `checklist_completions` - Checklist completion tracking
-- `communication_notes` - Team communication
 
 ---
 
