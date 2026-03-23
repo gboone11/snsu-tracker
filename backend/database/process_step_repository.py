@@ -5,25 +5,17 @@ class ProcessStepRepository:
     def __init__(self, db):
         self.db = db
 
-    def create(self, group_id: int, step_order: int, team_name: str, task_name: str, avg_duration_minutes: Optional[int]) -> int:
+    def create(self, step_order: int, team_name: str, task_name: str, avg_duration_minutes: Optional[int]) -> int:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
-                "INSERT INTO process_steps (group_id, step_order, team_name, task_name, avg_duration_minutes) VALUES (?, ?, ?, ?, ?)",
-                (group_id, step_order, team_name, task_name, avg_duration_minutes)
+                "INSERT INTO process_steps (step_order, team_name, task_name, avg_duration_minutes) VALUES (?, ?, ?, ?)",
+                (step_order, team_name, task_name, avg_duration_minutes)
             )
             return cursor.lastrowid
 
     def get_all(self) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
             cursor = conn.execute("SELECT * FROM process_steps ORDER BY step_order")
-            return [dict(row) for row in cursor.fetchall()]
-
-    def get_by_group(self, group_id: int) -> List[Dict[str, Any]]:
-        with self.db.get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM process_steps WHERE group_id = ? ORDER BY step_order",
-                (group_id,)
-            )
             return [dict(row) for row in cursor.fetchall()]
 
     def get_by_id(self, step_id: int) -> Optional[Dict[str, Any]]:

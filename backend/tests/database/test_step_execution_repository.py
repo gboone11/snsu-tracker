@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 from database.connection import Database
-from database.line_group_repository import LineGroupRepository
 from database.line_repository import LineRepository
 from database.run_repository import RunRepository
 from database.process_step_repository import ProcessStepRepository
@@ -14,16 +13,14 @@ class TestStepExecutionRepository(unittest.TestCase):
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
         self.temp_db.close()
         self.db = Database(db_path=self.temp_db.name)
-        self.group_repo = LineGroupRepository(self.db)
         self.line_repo = LineRepository(self.db)
         self.run_repo = RunRepository(self.db)
         self.step_repo = ProcessStepRepository(self.db)
         self.repo = StepExecutionRepository(self.db)
         
-        group_id = self.group_repo.create("24/7", "Test", "06:00")
-        self.line_id = self.line_repo.create("Line 1", group_id)
+        self.line_id = self.line_repo.create("Line 1")
         self.run_id = self.run_repo.create(self.line_id, "2024-01-01 18:00", "2024-01-02 06:00", "active")
-        self.step_id = self.step_repo.create(group_id, 1, "Sanitation", "Clean", 30)
+        self.step_id = self.step_repo.create(1, "Sanitation", "Clean", 30)
 
     def tearDown(self):
         if os.path.exists(self.temp_db.name):

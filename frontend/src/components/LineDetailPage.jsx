@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -17,8 +17,6 @@ import { apiService } from "../services/api";
 function LineDetailPage() {
   const { lineId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const groupId = searchParams.get("group");
   const [line, setLine] = useState(null);
   const [run, setRun] = useState(null);
   const [steps, setSteps] = useState([]);
@@ -48,7 +46,7 @@ function LineDetailPage() {
         }
 
         setRun(lineRun);
-        const stepsRes = await apiService.processSteps.getByGroup(lineRes.data.data.line_group_id);
+        const stepsRes = await apiService.processSteps.getAll();
         setSteps(stepsRes.data.data);
 
         const execRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
@@ -248,7 +246,7 @@ function LineDetailPage() {
       <Button
         variant="contained"
         startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(groupId ? `/?group=${groupId}` : "/")}
+        onClick={() => navigate("/")}
         sx={{ mb: 3 }}
       >
         Back

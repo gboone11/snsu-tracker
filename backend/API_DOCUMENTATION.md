@@ -149,9 +149,8 @@ http://127.0.0.1:8000
 ## Database Schema
 
 ### Tables
-- `line_groups` - Production line groupings (24/5, 24/7, Spirits)
 - `lines` - Individual production lines
-- `process_steps` - Workflow steps per group
+- `process_steps` - Workflow steps
 - `runs` - Startup run instances
 - `step_executions` - Step completion tracking
 - `checklist_templates` - Reusable checklists

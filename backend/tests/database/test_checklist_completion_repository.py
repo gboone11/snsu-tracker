@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 from database.connection import Database
-from database.line_group_repository import LineGroupRepository
 from database.line_repository import LineRepository
 from database.run_repository import RunRepository
 from database.process_step_repository import ProcessStepRepository
@@ -18,7 +17,6 @@ class TestChecklistCompletionRepository(unittest.TestCase):
         self.temp_db.close()
         self.db = Database(db_path=self.temp_db.name)
         
-        group_repo = LineGroupRepository(self.db)
         line_repo = LineRepository(self.db)
         run_repo = RunRepository(self.db)
         step_repo = ProcessStepRepository(self.db)
@@ -27,10 +25,9 @@ class TestChecklistCompletionRepository(unittest.TestCase):
         item_repo = ChecklistItemRepository(self.db)
         self.repo = ChecklistCompletionRepository(self.db)
         
-        group_id = group_repo.create("24/7", "Test", "06:00")
-        line_id = line_repo.create("Line 1", group_id)
+        line_id = line_repo.create("Line 1")
         run_id = run_repo.create(line_id, "2024-01-01 18:00", "2024-01-02 06:00", "active")
-        step_id = step_repo.create(group_id, 1, "Sanitation", "Clean", 30)
+        step_id = step_repo.create(1, "Sanitation", "Clean", 30)
         self.execution_id = execution_repo.create(run_id, step_id, "not-started")
         template_id = template_repo.create("Sanitation", "Cleaning", 0)
         self.item_id = item_repo.create(template_id, 1, "Remove product")

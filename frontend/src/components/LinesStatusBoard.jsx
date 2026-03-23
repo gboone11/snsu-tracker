@@ -21,20 +21,15 @@ function LinesStatusBoard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [linesRes, runsRes, groupsRes] = await Promise.all([
+        const [linesRes, runsRes, stepsRes] = await Promise.all([
           apiService.lines.getAll(),
           apiService.runs.getAll(),
-          apiService.lineGroups.getAll(),
+          apiService.processSteps.getAll(),
         ]);
         const allLines = linesRes.data.data;
         setLines(allLines);
 
-        // Fetch steps from the first available group
-        let stepsData = [];
-        if (groupsRes.data.data.length > 0) {
-          const stepsRes = await apiService.processSteps.getByGroup(groupsRes.data.data[0].group_id);
-          stepsData = stepsRes.data.data;
-        }
+        const stepsData = stepsRes.data.data;
         setSteps(stepsData);
 
         const allRuns = [...runsRes.data.data];

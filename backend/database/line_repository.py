@@ -5,11 +5,11 @@ class LineRepository:
     def __init__(self, db):
         self.db = db
 
-    def create(self, line_number: str, line_group_id: int) -> int:
+    def create(self, line_number: str) -> int:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
-                "INSERT INTO lines (line_number, line_group_id) VALUES (?, ?)",
-                (line_number, line_group_id)
+                "INSERT INTO lines (line_number) VALUES (?)",
+                (line_number,)
             )
             return cursor.lastrowid
 

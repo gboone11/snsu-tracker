@@ -11,18 +11,16 @@ line_repo = LineRepository(db)
 
 class LineCreate(BaseModel):
     line_number: str
-    line_group_id: int
 
 
 class LineUpdate(BaseModel):
     line_number: Optional[str] = None
-    line_group_id: Optional[int] = None
 
 
 @router.post("/lines")
 def create_line(line: LineCreate):
     try:
-        line_id = line_repo.create(line.line_number, line.line_group_id)
+        line_id = line_repo.create(line.line_number)
         return {"message": "Line created", "data": {"line_id": line_id}}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

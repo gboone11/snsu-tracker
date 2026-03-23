@@ -8,29 +8,13 @@ import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import { apiService } from "../services/api";
 
-const DEFAULT_GROUP_NAME = "Default";
-
 function LineConfigPage() {
   const [lines, setLines] = useState([]);
   const [newLine, setNewLine] = useState("");
-  const [defaultGroupId, setDefaultGroupId] = useState(null);
-
-  const getOrCreateDefaultGroup = async () => {
-    const groupsRes = await apiService.lineGroups.getAll();
-    let group = groupsRes.data.data.find((g) => g.group_name === DEFAULT_GROUP_NAME);
-    if (!group) {
-      // Refetch to get the full group object with group_id
-      const updated = await apiService.lineGroups.getAll();
-      group = updated.data.data.find((g) => g.group_name === DEFAULT_GROUP_NAME);
-    }
-    return group.group_id;
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const groupId = await getOrCreateDefaultGroup();
-        setDefaultGroupId(groupId);
         const linesRes = await apiService.lines.getAll();
         setLines(linesRes.data.data);
       } catch (error) {
@@ -48,7 +32,7 @@ function LineConfigPage() {
       return;
     }
     try {
-      await apiService.lines.create({ line_number: lineNum, line_group_id: defaultGroupId });
+      await apiService.lines.create({ line_number: lineNum });
       const linesRes = await apiService.lines.getAll();
       setLines(linesRes.data.data);
       setNewLine("");
@@ -80,7 +64,7 @@ function LineConfigPage() {
         <Box sx={{ display: "flex", gap: 1 }}>
           <TextField
             size="small"
-            placeholder="Line number (e.g., 1)"
+            placeholder="Line number (e.g., 101)"
             value={newLine}
             onChange={(e) => setNewLine(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleAddLine()}

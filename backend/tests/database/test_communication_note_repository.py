@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 from database.connection import Database
-from database.line_group_repository import LineGroupRepository
 from database.line_repository import LineRepository
 from database.run_repository import RunRepository
 from database.communication_note_repository import CommunicationNoteRepository
@@ -13,13 +12,11 @@ class TestCommunicationNoteRepository(unittest.TestCase):
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
         self.temp_db.close()
         self.db = Database(db_path=self.temp_db.name)
-        self.group_repo = LineGroupRepository(self.db)
         self.line_repo = LineRepository(self.db)
         self.run_repo = RunRepository(self.db)
         self.repo = CommunicationNoteRepository(self.db)
         
-        group_id = self.group_repo.create("24/7", "Test", "06:00")
-        self.line_id = self.line_repo.create("Line 1", group_id)
+        self.line_id = self.line_repo.create("Line 1")
         self.run_id = self.run_repo.create(self.line_id, "2024-01-01 18:00", "2024-01-02 06:00", "active")
 
     def tearDown(self):

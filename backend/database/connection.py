@@ -28,30 +28,18 @@ class Database:
         with self.get_connection() as conn:
             conn.executescript(
                 """
-                CREATE TABLE IF NOT EXISTS line_groups (
-                    group_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    group_name TEXT UNIQUE NOT NULL,
-                    description TEXT,
-                    target_ready_time TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                
                 CREATE TABLE IF NOT EXISTS lines (
                     line_id INTEGER PRIMARY KEY AUTOINCREMENT,
                     line_number TEXT UNIQUE NOT NULL,
-                    line_group_id INTEGER NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (line_group_id) REFERENCES line_groups(group_id) ON DELETE CASCADE
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 
                 CREATE TABLE IF NOT EXISTS process_steps (
                     step_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    group_id INTEGER NOT NULL,
                     step_order INTEGER NOT NULL,
                     team_name TEXT NOT NULL,
                     task_name TEXT NOT NULL,
-                    avg_duration_minutes INTEGER,
-                    FOREIGN KEY (group_id) REFERENCES line_groups(group_id)
+                    avg_duration_minutes INTEGER
                 );
                 
                 CREATE TABLE IF NOT EXISTS runs (
@@ -128,8 +116,7 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 
-                CREATE INDEX IF NOT EXISTS idx_lines_group ON lines(line_group_id);
-                CREATE INDEX IF NOT EXISTS idx_steps_group ON process_steps(group_id, step_order);
+                CREATE INDEX IF NOT EXISTS idx_steps_order ON process_steps(step_order);
                 CREATE INDEX IF NOT EXISTS idx_runs_line ON runs(line_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_executions_run ON step_executions(run_id, step_id);
                 CREATE INDEX IF NOT EXISTS idx_notes_line ON communication_notes(line_id, created_at DESC);
@@ -147,6 +134,5 @@ class Database:
             conn.execute("DROP TABLE IF EXISTS runs")
             conn.execute("DROP TABLE IF EXISTS process_steps")
             conn.execute("DROP TABLE IF EXISTS lines")
-            conn.execute("DROP TABLE IF EXISTS line_groups")
             conn.execute("DROP TABLE IF EXISTS users")
         self._init_db()
