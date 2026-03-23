@@ -169,11 +169,11 @@ function LinesStatusBoard() {
         </FormControl>
       </Box>
       <TableContainer>
-        <Table size="small">
+        <Table size="small" sx={{ tableLayout: "fixed" }}>
           <TableHead>
             <TableRow>
-              <TableCell>Line</TableCell>
-              <TableCell>Work Order Ended</TableCell>
+              <TableCell sx={{ width: 60 }}>Line</TableCell>
+              <TableCell sx={{ width: 190 }}>Work Order Ended</TableCell>
               {steps.map((step) => (
                 <TableCell key={step.step_id}>
                   {step.team_name}
@@ -181,7 +181,7 @@ function LinesStatusBoard() {
                   <small>{step.task_name}</small>
                 </TableCell>
               ))}
-              <TableCell>Work Order Starts</TableCell>
+              <TableCell sx={{ width: 190 }}>Work Order Starts</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
