@@ -27,10 +27,7 @@ function LinesStatusBoard() {
           apiService.processSteps.getAll(),
         ]);
         const allLines = linesRes.data.data;
-        setLines(allLines);
-
         const stepsData = stepsRes.data.data;
-        setSteps(stepsData);
 
         const allRuns = [...runsRes.data.data];
         for (const line of allLines) {
@@ -42,22 +39,26 @@ function LinesStatusBoard() {
             allRuns.push(newRunRes.data.data);
           }
         }
-        setRuns(allRuns);
 
         const allExecutions = [];
         for (const run of allRuns) {
           const execRes = await apiService.stepExecutions.getByRun(run.run_id);
           if (execRes.data.data.length === 0 && stepsData.length > 0) {
-            const newExec = await apiService.stepExecutions.create({
+            await apiService.stepExecutions.create({
               run_id: run.run_id,
               step_id: stepsData[0].step_id,
               status: "in_progress",
             });
-            allExecutions.push(newExec.data.data);
+            const refetch = await apiService.stepExecutions.getByRun(run.run_id);
+            allExecutions.push(...refetch.data.data);
           } else {
             allExecutions.push(...execRes.data.data);
           }
         }
+
+        setLines(allLines);
+        setSteps(stepsData);
+        setRuns(allRuns);
         setExecutions(allExecutions);
       } catch (error) {
         console.error("Error fetching data:", error);

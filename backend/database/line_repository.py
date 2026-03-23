@@ -5,15 +5,15 @@ class LineRepository:
     def __init__(self, db):
         self.db = db
 
-    def create(self, line_number: str) -> int:
+    def create(self, line_number: int) -> int:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
                 "SELECT COALESCE(MAX(display_order), 0) + 1 FROM lines"
             )
             next_order = cursor.fetchone()[0]
             cursor = conn.execute(
-                "INSERT INTO lines (line_number, display_order) VALUES (?, ?)",
-                (line_number, next_order),
+                "INSERT INTO lines (line_id, line_number, display_order) VALUES (?, ?, ?)",
+                (line_number, line_number, next_order),
             )
             return cursor.lastrowid
 

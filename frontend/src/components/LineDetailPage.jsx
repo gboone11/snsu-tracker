@@ -291,6 +291,8 @@ function LineDetailPage() {
                     ? "#fff9c4"
                     : "inherit";
               const isCompleted = status === "completed";
+              const prevCompleted = idx === 0 || getExecution(steps[idx - 1].step_id).status === "completed";
+              const canSignOff = !isCompleted && prevCompleted;
               return (
                 <TableRow key={step.step_id} sx={{ backgroundColor: rowColor }}>
                   <TableCell>{idx + 1}</TableCell>
@@ -313,7 +315,7 @@ function LineDetailPage() {
                         });
                         handleTimeChange(step.step_id, newValue);
                       }}
-                      disabled={isCompleted}
+                      disabled={isCompleted || !canSignOff}
                     />
                   </TableCell>
                   <TableCell>{duration}</TableCell>
@@ -332,12 +334,14 @@ function LineDetailPage() {
                               [step.step_id]: e.target.value.slice(0, 3).toUpperCase(),
                             })
                           }
-                          inputProps={{ maxLength: 3, style: { width: 40, textAlign: "center" } }}
+                          slotProps={{ htmlInput: { maxLength: 3, style: { width: 40, textAlign: "center" } } }}
+                          disabled={!canSignOff}
                         />
                         <Button
                           variant="contained"
                           size="small"
                           onClick={() => handleSignOff(step.step_id)}
+                          disabled={!canSignOff}
                         >
                           Sign Off
                         </Button>
