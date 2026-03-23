@@ -209,7 +209,7 @@ function LinesStatusBoard() {
                                 : "transparent",
                         }}
                       >
-                        {status.text}
+                        {""}
                       </TableCell>
                     );
                   })}
