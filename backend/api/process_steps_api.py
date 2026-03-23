@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database.connection import Database
@@ -10,7 +10,6 @@ step_repo = ProcessStepRepository(db)
 
 
 class ProcessStepCreate(BaseModel):
-    group_id: int
     step_order: int
     team_name: str
     task_name: str
@@ -24,10 +23,16 @@ class ProcessStepUpdate(BaseModel):
     avg_duration_minutes: Optional[int] = None
 
 
+class ReorderRequest(BaseModel):
+    ordered_ids: List[int]
+
+
 @router.post("/process-steps")
 def create_step(step: ProcessStepCreate):
     try:
-        step_id = step_repo.create(step.group_id, step.step_order, step.team_name, step.task_name, step.avg_duration_minutes)
+        step_id = step_repo.create(
+            step.step_order, step.team_name, step.task_name, step.avg_duration_minutes
+        )
         return {"message": "Step created", "data": {"step_id": step_id}}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -39,10 +44,13 @@ def get_steps():
     return {"data": steps}
 
 
-@router.get("/process-steps/group/{group_id}")
-def get_steps_by_group(group_id: int):
-    steps = step_repo.get_by_group(group_id)
-    return {"data": steps}
+@router.put("/process-steps/reorder")
+def reorder_steps(req: ReorderRequest):
+    try:
+        step_repo.reorder(req.ordered_ids)
+        return {"message": "Steps reordered"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/process-steps/{step_id}")

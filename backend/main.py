@@ -3,8 +3,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database.connection import Database
-from api.user_api import router as user_router
-from api.line_groups_api import router as line_groups_router
 from api.lines_api import router as lines_router
 from api.runs_api import router as runs_router
 from api.process_steps_api import router as process_steps_router
@@ -13,7 +11,7 @@ from api.step_executions_api import router as step_executions_router
 app = FastAPI(title="SNSU Tracker API", version="1.0.0")
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore[arg-type]
     allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -28,8 +26,6 @@ class ApiResponse(BaseModel):
 
 db = Database()
 
-app.include_router(user_router)
-app.include_router(line_groups_router)
 app.include_router(lines_router)
 app.include_router(runs_router)
 app.include_router(process_steps_router)

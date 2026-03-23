@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -12,22 +12,19 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
-import Checkbox from "@mui/material/Checkbox";
-import IconButton from "@mui/material/IconButton";
-import DeleteIcon from "@mui/icons-material/Delete";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import dayjs from "dayjs";
 import { apiService } from "../services/api";
 
 function LineDetailPage() {
   const { lineId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const groupId = searchParams.get("group");
   const [line, setLine] = useState(null);
   const [run, setRun] = useState(null);
   const [steps, setSteps] = useState([]);
   const [executions, setExecutions] = useState([]);
-  const [newStep, setNewStep] = useState({ team_name: "", task_name: "" });
   const [timeInputs, setTimeInputs] = useState({});
+  const [initialsInputs, setInitialsInputs] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,8 +39,6 @@ function LineDetailPage() {
           console.log("No run found, creating one...");
           const newRunRes = await apiService.runs.create({
             line_id: parseInt(lineId),
-            work_order_end_time: new Date().toISOString(),
-            target_ready_time: new Date().toISOString(),
             status: "in_progress",
           });
           lineRun = newRunRes.data.data;
@@ -51,7 +46,7 @@ function LineDetailPage() {
         }
 
         setRun(lineRun);
-        const stepsRes = await apiService.processSteps.getByGroup(lineRes.data.data.line_group_id);
+        const stepsRes = await apiService.processSteps.getAll();
         setSteps(stepsRes.data.data);
 
         const execRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
@@ -78,17 +73,17 @@ function LineDetailPage() {
     return executions.find((e) => e.step_id === stepId) || {};
   };
 
-  const handleTimeChange = async (stepId, field, value) => {
-    if (!value) return;
-    if (!run) {
-      console.log("No run in handleTimeChange");
-      return;
-    }
-    const date = new Date(value);
-    if (isNaN(date.getTime())) {
-      alert("Invalid date format. Use MM/DD/YYYY HH:MM AM/PM");
-      return;
-    }
+  const getStartTime = (stepId) => {
+    const idx = steps.findIndex((s) => s.step_id === stepId);
+    if (idx <= 0) return run?.work_order_end_time || null;
+    const prevExec = getExecution(steps[idx - 1].step_id);
+    return prevExec.end_time || null;
+  };
+
+  const handleTimeChange = async (stepId, value) => {
+    if (!value || !run) return;
+    const date = dayjs.isDayjs(value) ? value.toDate() : new Date(value);
+    if (isNaN(date.getTime())) return;
 
     const execution = getExecution(stepId);
     const isoValue = date.toISOString();
@@ -99,15 +94,20 @@ function LineDetailPage() {
         step_id: stepId,
         status: "in_progress",
       });
-      await apiService.stepExecutions.update(newExec.data.data.execution_id, { [field]: isoValue });
+      await apiService.stepExecutions.update(newExec.data.data.execution_id, { end_time: isoValue });
     } else {
-      await apiService.stepExecutions.update(execution.execution_id, { [field]: isoValue });
+      await apiService.stepExecutions.update(execution.execution_id, { end_time: isoValue });
     }
     const execRes = await apiService.stepExecutions.getByRun(run.run_id);
     setExecutions(execRes.data.data);
   };
 
   const handleSignOff = async (stepId) => {
+    const initials = (initialsInputs[stepId] || "").trim();
+    if (!initials || initials.length < 2 || initials.length > 3) {
+      alert("Please enter 2 or 3 character initials.");
+      return;
+    }
     console.log("=== SIGN OFF START ===", { stepId, run });
     if (!run) {
       console.log("❌ No run found, exiting");
@@ -117,32 +117,26 @@ function LineDetailPage() {
     const execution = getExecution(stepId);
     console.log("Current execution:", execution);
 
-    const startInput = timeInputs[`${stepId}-start_time`];
     const endInput = timeInputs[`${stepId}-end_time`];
-    console.log("Time inputs:", { startInput, endInput });
 
-    let startTime = execution.start_time;
+    let startTime = getStartTime(stepId);
     let endTime = execution.end_time;
 
-    if (startInput) {
-      const date = new Date(startInput);
-      if (!isNaN(date.getTime())) {
-        startTime = date.toISOString();
-        console.log("✓ Converted start time:", startTime);
-      }
-    }
     if (endInput) {
-      const date = new Date(endInput);
+      const date = dayjs.isDayjs(endInput) ? endInput.toDate() : new Date(endInput);
       if (!isNaN(date.getTime())) {
         endTime = date.toISOString();
-        console.log("✓ Converted end time:", endTime);
       }
     }
 
     let duration = null;
     if (startTime && endTime) {
       duration = Math.round((new Date(endTime) - new Date(startTime)) / 60000);
-      console.log("✓ Calculated duration:", duration);
+    }
+
+    if (!duration || duration < 0) {
+      alert("End time must be after start time (duration must be positive and non-zero.");
+      return;
     }
 
     try {
@@ -155,7 +149,7 @@ function LineDetailPage() {
           start_time: startTime,
           end_time: endTime,
           duration_minutes: duration,
-          signed_by: "User",
+          signed_by: initials,
           signed_at: new Date().toISOString(),
         });
         console.log("✓ Created execution");
@@ -166,7 +160,7 @@ function LineDetailPage() {
           start_time: startTime,
           end_time: endTime,
           duration_minutes: duration,
-          signed_by: "User",
+          signed_by: initials,
           signed_at: new Date().toISOString(),
         });
         console.log("✓ Updated execution");
@@ -218,27 +212,6 @@ function LineDetailPage() {
     return diff;
   };
 
-  const handleAddStep = async () => {
-    if (!newStep.team_name || !newStep.task_name) {
-      alert("Team and task are required");
-      return;
-    }
-    try {
-      await apiService.processSteps.create({
-        group_id: line.line_group_id,
-        step_order: steps.length + 1,
-        team_name: newStep.team_name,
-        task_name: newStep.task_name,
-        avg_duration_minutes: null,
-      });
-      const stepsRes = await apiService.processSteps.getByGroup(line.line_group_id);
-      setSteps(stepsRes.data.data);
-      setNewStep({ team_name: "", task_name: "" });
-    } catch (error) {
-      alert("Error adding step: " + error.message);
-    }
-  };
-
   const handleResetTasks = async () => {
     if (!window.confirm("Reset all tasks? This will clear all progress.")) return;
     try {
@@ -260,17 +233,6 @@ function LineDetailPage() {
     }
   };
 
-  const handleDeleteStep = async (stepId) => {
-    if (!window.confirm("Delete this step?")) return;
-    try {
-      await apiService.processSteps.delete(stepId);
-      const stepsRes = await apiService.processSteps.getByGroup(line.line_group_id);
-      setSteps(stepsRes.data.data);
-    } catch (error) {
-      alert("Error deleting step: " + error.message);
-    }
-  };
-
   if (!line) return <Box sx={{ p: 3 }}>Loading...</Box>;
 
   return (
@@ -278,7 +240,7 @@ function LineDetailPage() {
       <Button
         variant="contained"
         startIcon={<ArrowBackIcon />}
-        onClick={() => navigate(groupId ? `/?group=${groupId}` : "/")}
+        onClick={() => navigate("/")}
         sx={{ mb: 3 }}
       >
         Back
@@ -289,29 +251,19 @@ function LineDetailPage() {
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
         Line {line.line_number} - SNSU Process
       </Typography>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Add New Process Step
+      <Paper sx={{ p: 2, mb: 3, display: "flex", gap: 4 }}>
+        <Typography>
+          <strong>WO Ended:</strong>{" "}
+          {run?.work_order_end_time
+            ? new Date(run.work_order_end_time).toLocaleString()
+            : "-"}
         </Typography>
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-          <TextField
-            label="Team"
-            size="small"
-            value={newStep.team_name}
-            onChange={(e) => setNewStep({ ...newStep, team_name: e.target.value })}
-            sx={{ flex: 1 }}
-          />
-          <TextField
-            label="Task"
-            size="small"
-            value={newStep.task_name}
-            onChange={(e) => setNewStep({ ...newStep, task_name: e.target.value })}
-            sx={{ flex: 2 }}
-          />
-          <Button variant="contained" onClick={handleAddStep}>
-            + Add Step
-          </Button>
-        </Box>
+        <Typography>
+          <strong>Target Start:</strong>{" "}
+          {run?.target_ready_time
+            ? new Date(run.target_ready_time).toLocaleString()
+            : "-"}
+        </Typography>
       </Paper>
       <TableContainer component={Paper}>
         <Table>
@@ -321,17 +273,16 @@ function LineDetailPage() {
               <TableCell>Team</TableCell>
               <TableCell>Task</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Start Time</TableCell>
               <TableCell>End Time</TableCell>
               <TableCell>Duration (min)</TableCell>
               <TableCell>Sign Off</TableCell>
-              <TableCell>Delete</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {steps.map((step, idx) => {
               const execution = getExecution(step.step_id);
-              const duration = calculateDuration(execution.start_time, execution.end_time);
+              const startTime = getStartTime(step.step_id);
+              const duration = calculateDuration(startTime, execution.end_time);
               const status = execution.status || (idx === 0 ? "in_progress" : "not_started");
               const rowColor =
                 status === "completed"
@@ -349,40 +300,19 @@ function LineDetailPage() {
                     {execution.status || (idx === 0 ? "in_progress" : "not_started")}
                   </TableCell>
                   <TableCell>
-                    <TextField
-                      size="small"
-                      placeholder="MM/DD/YYYY HH:MM AM/PM"
-                      value={
-                        timeInputs[`${step.step_id}-start_time`] ??
-                        (execution.start_time
-                          ? new Date(execution.start_time).toLocaleString()
-                          : "")
-                      }
-                      onChange={(e) =>
-                        setTimeInputs({
-                          ...timeInputs,
-                          [`${step.step_id}-start_time`]: e.target.value,
-                        })
-                      }
-                      onBlur={(e) => handleTimeChange(step.step_id, "start_time", e.target.value)}
-                      disabled={isCompleted}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      size="small"
-                      placeholder="MM/DD/YYYY HH:MM AM/PM"
+                    <DateTimePicker
+                      slotProps={{ textField: { size: "small" } }}
                       value={
                         timeInputs[`${step.step_id}-end_time`] ??
-                        (execution.end_time ? new Date(execution.end_time).toLocaleString() : "")
+                        (execution.end_time ? dayjs(execution.end_time) : null)
                       }
-                      onChange={(e) =>
+                      onChange={(newValue) => {
                         setTimeInputs({
                           ...timeInputs,
-                          [`${step.step_id}-end_time`]: e.target.value,
-                        })
-                      }
-                      onBlur={(e) => handleTimeChange(step.step_id, "end_time", e.target.value)}
+                          [`${step.step_id}-end_time`]: newValue,
+                        });
+                        handleTimeChange(step.step_id, newValue);
+                      }}
                       disabled={isCompleted}
                     />
                   </TableCell>
@@ -391,23 +321,28 @@ function LineDetailPage() {
                     {execution.signed_by ? (
                       <Typography color="success.main">✓ {execution.signed_by}</Typography>
                     ) : (
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => handleSignOff(step.step_id)}
-                      >
-                        Sign Off
-                      </Button>
+                      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                        <TextField
+                          size="small"
+                          placeholder="Initials"
+                          value={initialsInputs[step.step_id] || ""}
+                          onChange={(e) =>
+                            setInitialsInputs({
+                              ...initialsInputs,
+                              [step.step_id]: e.target.value.slice(0, 3).toUpperCase(),
+                            })
+                          }
+                          inputProps={{ maxLength: 3, style: { width: 40, textAlign: "center" } }}
+                        />
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => handleSignOff(step.step_id)}
+                        >
+                          Sign Off
+                        </Button>
+                      </Box>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeleteStep(step.step_id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
                   </TableCell>
                 </TableRow>
               );

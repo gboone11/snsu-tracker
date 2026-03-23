@@ -8,19 +8,13 @@ const api = axios.create({
 });
 
 export const apiService = {
-  lineGroups: {
-    create: (data) => api.post('/line-groups', data),
-    getAll: () => api.get('/line-groups'),
-    getById: (id) => api.get(`/line-groups/${id}`),
-    update: (id, data) => api.put(`/line-groups/${id}`, data),
-    delete: (id) => api.delete(`/line-groups/${id}`)
-  },
   lines: {
     create: (data) => api.post('/lines', data),
     getAll: () => api.get('/lines'),
     getById: (id) => api.get(`/lines/${id}`),
     update: (id, data) => api.put(`/lines/${id}`, data),
-    delete: (id) => api.delete(`/lines/${id}`)
+    delete: (id) => api.delete(`/lines/${id}`),
+    reorder: (orderedIds) => api.put('/lines/reorder', { ordered_ids: orderedIds })
   },
   runs: {
     create: (data) => api.post('/runs', data),
@@ -33,10 +27,10 @@ export const apiService = {
   processSteps: {
     create: (data) => api.post('/process-steps', data),
     getAll: () => api.get('/process-steps'),
-    getByGroup: (groupId) => api.get(`/process-steps/group/${groupId}`),
     getById: (id) => api.get(`/process-steps/${id}`),
     update: (id, data) => api.put(`/process-steps/${id}`, data),
-    delete: (id) => api.delete(`/process-steps/${id}`)
+    delete: (id) => api.delete(`/process-steps/${id}`),
+    reorder: (orderedIds) => api.put('/process-steps/reorder', { ordered_ids: orderedIds })
   },
   stepExecutions: {
     create: (data) => api.post('/step-executions', data),
