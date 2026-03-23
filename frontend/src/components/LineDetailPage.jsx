@@ -12,9 +12,6 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
-import Checkbox from "@mui/material/Checkbox";
-import IconButton from "@mui/material/IconButton";
-import DeleteIcon from "@mui/icons-material/Delete";
 import { apiService } from "../services/api";
 
 function LineDetailPage() {
@@ -26,7 +23,6 @@ function LineDetailPage() {
   const [run, setRun] = useState(null);
   const [steps, setSteps] = useState([]);
   const [executions, setExecutions] = useState([]);
-  const [newStep, setNewStep] = useState({ team_name: "", task_name: "" });
   const [timeInputs, setTimeInputs] = useState({});
 
   useEffect(() => {
@@ -218,27 +214,6 @@ function LineDetailPage() {
     return diff;
   };
 
-  const handleAddStep = async () => {
-    if (!newStep.team_name || !newStep.task_name) {
-      alert("Team and task are required");
-      return;
-    }
-    try {
-      await apiService.processSteps.create({
-        group_id: line.line_group_id,
-        step_order: steps.length + 1,
-        team_name: newStep.team_name,
-        task_name: newStep.task_name,
-        avg_duration_minutes: null,
-      });
-      const stepsRes = await apiService.processSteps.getByGroup(line.line_group_id);
-      setSteps(stepsRes.data.data);
-      setNewStep({ team_name: "", task_name: "" });
-    } catch (error) {
-      alert("Error adding step: " + error.message);
-    }
-  };
-
   const handleResetTasks = async () => {
     if (!window.confirm("Reset all tasks? This will clear all progress.")) return;
     try {
@@ -260,17 +235,6 @@ function LineDetailPage() {
     }
   };
 
-  const handleDeleteStep = async (stepId) => {
-    if (!window.confirm("Delete this step?")) return;
-    try {
-      await apiService.processSteps.delete(stepId);
-      const stepsRes = await apiService.processSteps.getByGroup(line.line_group_id);
-      setSteps(stepsRes.data.data);
-    } catch (error) {
-      alert("Error deleting step: " + error.message);
-    }
-  };
-
   if (!line) return <Box sx={{ p: 3 }}>Loading...</Box>;
 
   return (
@@ -289,30 +253,6 @@ function LineDetailPage() {
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
         Line {line.line_number} - SNSU Process
       </Typography>
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Add New Process Step
-        </Typography>
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-          <TextField
-            label="Team"
-            size="small"
-            value={newStep.team_name}
-            onChange={(e) => setNewStep({ ...newStep, team_name: e.target.value })}
-            sx={{ flex: 1 }}
-          />
-          <TextField
-            label="Task"
-            size="small"
-            value={newStep.task_name}
-            onChange={(e) => setNewStep({ ...newStep, task_name: e.target.value })}
-            sx={{ flex: 2 }}
-          />
-          <Button variant="contained" onClick={handleAddStep}>
-            + Add Step
-          </Button>
-        </Box>
-      </Paper>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -325,7 +265,6 @@ function LineDetailPage() {
               <TableCell>End Time</TableCell>
               <TableCell>Duration (min)</TableCell>
               <TableCell>Sign Off</TableCell>
-              <TableCell>Delete</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -399,15 +338,6 @@ function LineDetailPage() {
                         Sign Off
                       </Button>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeleteStep(step.step_id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
                   </TableCell>
                 </TableRow>
               );
