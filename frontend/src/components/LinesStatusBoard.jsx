@@ -8,56 +8,37 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import Box from "@mui/material/Box";
 import { apiService } from "../services/api";
 
 function LinesStatusBoard() {
   const navigate = useNavigate();
-  const [groups, setGroups] = useState([]);
-  const [selectedGroup, setSelectedGroup] = useState("");
   const [lines, setLines] = useState([]);
   const [runs, setRuns] = useState([]);
   const [steps, setSteps] = useState([]);
   const [executions, setExecutions] = useState([]);
 
   useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        const response = await apiService.lineGroups.getAll();
-        setGroups(response.data.data);
-        const params = new URLSearchParams(window.location.search);
-        const groupParam = params.get("group");
-        if (groupParam) {
-          setSelectedGroup(parseInt(groupParam));
-        } else if (response.data.data.length > 0) {
-          setSelectedGroup(response.data.data[0].group_id);
-        }
-      } catch (error) {
-        console.error("Error fetching groups:", error);
-      }
-    };
-    fetchGroups();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedGroup) return;
     const fetchData = async () => {
       try {
-        const [linesRes, runsRes, stepsRes] = await Promise.all([
+        const [linesRes, runsRes, groupsRes] = await Promise.all([
           apiService.lines.getAll(),
           apiService.runs.getAll(),
-          apiService.processSteps.getByGroup(selectedGroup),
+          apiService.lineGroups.getAll(),
         ]);
-        const groupLines = linesRes.data.data.filter((l) => l.line_group_id === selectedGroup);
-        setLines(groupLines);
-        setSteps(stepsRes.data.data);
+        const allLines = linesRes.data.data;
+        setLines(allLines);
+
+        // Fetch steps from the first available group
+        let stepsData = [];
+        if (groupsRes.data.data.length > 0) {
+          const stepsRes = await apiService.processSteps.getByGroup(groupsRes.data.data[0].group_id);
+          stepsData = stepsRes.data.data;
+        }
+        setSteps(stepsData);
 
         const allRuns = [...runsRes.data.data];
-        for (const line of groupLines) {
+        for (const line of allLines) {
           if (!allRuns.find((r) => r.line_id === line.line_id)) {
             const newRunRes = await apiService.runs.create({
               line_id: line.line_id,
@@ -73,12 +54,10 @@ function LinesStatusBoard() {
         const allExecutions = [];
         for (const run of allRuns) {
           const execRes = await apiService.stepExecutions.getByRun(run.run_id);
-
-          // Create first step execution if none exist
-          if (execRes.data.data.length === 0 && stepsRes.data.data.length > 0) {
+          if (execRes.data.data.length === 0 && stepsData.length > 0) {
             const newExec = await apiService.stepExecutions.create({
               run_id: run.run_id,
-              step_id: stepsRes.data.data[0].step_id,
+              step_id: stepsData[0].step_id,
               status: "in_progress",
             });
             allExecutions.push(newExec.data.data);
@@ -92,7 +71,7 @@ function LinesStatusBoard() {
       }
     };
     fetchData();
-  }, [selectedGroup]);
+  }, []);
 
   const getStepStatus = (lineId, stepIndex) => {
     const run = runs.find((r) => r.line_id === lineId);
@@ -149,25 +128,9 @@ function LinesStatusBoard() {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          Lines Status Board
-        </Typography>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>Group</InputLabel>
-          <Select
-            value={selectedGroup}
-            label="Group"
-            onChange={(e) => setSelectedGroup(e.target.value)}
-          >
-            {groups.map((group) => (
-              <MenuItem key={group.group_id} value={group.group_id}>
-                {group.group_name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
+      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+        Lines Status Board
+      </Typography>
       <TableContainer>
         <Table size="small" sx={{ tableLayout: "fixed" }}>
           <TableHead>
@@ -190,8 +153,7 @@ function LinesStatusBoard() {
                 <TableRow key={line.line_id}>
                   <TableCell
                     sx={{ cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
-                    onClick={() => navigate(`/line/${line.line_id}?group=${selectedGroup}`)}
-                  >
+                    onClick={() => navigate(`/line/${line.line_id}`)}                  >
                     {line.line_number}
                   </TableCell>
                   <TableCell>{randomEndTimes[line.line_id]}</TableCell>
