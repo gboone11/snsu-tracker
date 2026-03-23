@@ -16,7 +16,8 @@ function ProcessStepsConfigPanel() {
   const [newTask, setNewTask] = useState("");
 
   useEffect(() => {
-    apiService.processSteps.getAll()
+    apiService.processSteps
+      .getAll()
       .then((res) => setSteps(res.data.data))
       .catch((err) => console.error("Error fetching steps:", err));
   }, []);
@@ -42,7 +43,8 @@ function ProcessStepsConfigPanel() {
   };
 
   const handleRemove = async (step) => {
-    if (!window.confirm(`Remove step "${step.team_name} — ${step.task_name}"?`)) return;
+    if (!window.confirm(`Remove step "${step.team_name} — ${step.task_name}"?`))
+      return;
     try {
       await apiService.processSteps.delete(step.step_id);
       const remaining = steps.filter((s) => s.step_id !== step.step_id);
@@ -78,7 +80,10 @@ function ProcessStepsConfigPanel() {
     const swapIndex = index + direction;
     if (swapIndex < 0 || swapIndex >= steps.length) return;
     const reordered = [...steps];
-    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+    [reordered[index], reordered[swapIndex]] = [
+      reordered[swapIndex],
+      reordered[index],
+    ];
     setSteps(reordered);
     try {
       await apiService.processSteps.reorder(reordered.map((s) => s.step_id));
@@ -127,20 +132,37 @@ function ProcessStepsConfigPanel() {
               gap: 0.5,
             }}
           >
-            <IconButton size="small" disabled={i === 0} onClick={() => handleMove(i, -1)}>
+            <IconButton
+              size="small"
+              disabled={i === 0}
+              onClick={() => handleMove(i, -1)}
+            >
               <ArrowUpwardIcon fontSize="small" />
             </IconButton>
-            <IconButton size="small" disabled={i === steps.length - 1} onClick={() => handleMove(i, 1)}>
+            <IconButton
+              size="small"
+              disabled={i === steps.length - 1}
+              onClick={() => handleMove(i, 1)}
+            >
               <ArrowDownwardIcon fontSize="small" />
             </IconButton>
-            <Typography variant="body2" sx={{ flex: 1 }}>{step.team_name} — {step.task_name}</Typography>
-            <IconButton size="small" sx={{ p: 0.25, color: "error.main" }} onClick={() => handleRemove(step)}>
+            <Typography variant="body2" sx={{ flex: 1 }}>
+              {step.team_name} — {step.task_name}
+            </Typography>
+            <IconButton
+              size="small"
+              sx={{ p: 0.25, color: "error.main" }}
+              onClick={() => handleRemove(step)}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
         ))}
         {steps.length === 0 && (
-          <Typography variant="body2" sx={{ color: "text.secondary", fontStyle: "italic" }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", fontStyle: "italic" }}
+          >
             No process steps configured
           </Typography>
         )}

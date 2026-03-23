@@ -9,34 +9,36 @@ const api = axios.create({
 
 export const apiService = {
   lines: {
-    create: (data) => api.post('/lines', data),
-    getAll: () => api.get('/lines'),
+    create: (data) => api.post("/lines", data),
+    getAll: () => api.get("/lines"),
     getById: (id) => api.get(`/lines/${id}`),
     update: (id, data) => api.put(`/lines/${id}`, data),
     delete: (id) => api.delete(`/lines/${id}`),
-    reorder: (orderedIds) => api.put('/lines/reorder', { ordered_ids: orderedIds })
+    reorder: (orderedIds) =>
+      api.put("/lines/reorder", { ordered_ids: orderedIds }),
   },
   runs: {
-    create: (data) => api.post('/runs', data),
-    getAll: () => api.get('/runs'),
-    getActive: () => api.get('/runs/active'),
+    create: (data) => api.post("/runs", data),
+    getAll: () => api.get("/runs"),
+    getActive: () => api.get("/runs/active"),
     getById: (id) => api.get(`/runs/${id}`),
     update: (id, data) => api.put(`/runs/${id}`, data),
-    delete: (id) => api.delete(`/runs/${id}`)
+    delete: (id) => api.delete(`/runs/${id}`),
   },
   processSteps: {
-    create: (data) => api.post('/process-steps', data),
-    getAll: () => api.get('/process-steps'),
+    create: (data) => api.post("/process-steps", data),
+    getAll: () => api.get("/process-steps"),
     getById: (id) => api.get(`/process-steps/${id}`),
     update: (id, data) => api.put(`/process-steps/${id}`, data),
     delete: (id) => api.delete(`/process-steps/${id}`),
-    reorder: (orderedIds) => api.put('/process-steps/reorder', { ordered_ids: orderedIds })
+    reorder: (orderedIds) =>
+      api.put("/process-steps/reorder", { ordered_ids: orderedIds }),
   },
   stepExecutions: {
-    create: (data) => api.post('/step-executions', data),
+    create: (data) => api.post("/step-executions", data),
     getByRun: (runId) => api.get(`/step-executions/run/${runId}`),
     getById: (id) => api.get(`/step-executions/${id}`),
     update: (id, data) => api.put(`/step-executions/${id}`, data),
-    delete: (id) => api.delete(`/step-executions/${id}`)
+    delete: (id) => api.delete(`/step-executions/${id}`),
   },
 };

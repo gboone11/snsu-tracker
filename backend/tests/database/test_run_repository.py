@@ -13,7 +13,7 @@ class TestRunRepository(unittest.TestCase):
         self.db = Database(db_path=self.temp_db.name)
         self.line_repo = LineRepository(self.db)
         self.repo = RunRepository(self.db)
-        self.line_id = self.line_repo.create("Line 1")
+        self.line_id = self.line_repo.create(1)
 
     def tearDown(self):
         if os.path.exists(self.temp_db.name):

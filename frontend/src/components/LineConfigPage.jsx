@@ -6,7 +6,10 @@ import ProcessStepsConfigPanel from "./ProcessStepsConfigPanel";
 function LineConfigPage() {
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 600, textAlign: "left" }}>
+      <Typography
+        variant="h4"
+        sx={{ mb: 3, fontWeight: 600, textAlign: "left" }}
+      >
         Configuration
       </Typography>
       <Box sx={{ display: "flex", gap: 3 }}>

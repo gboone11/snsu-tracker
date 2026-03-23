@@ -33,7 +33,9 @@ function LineDetailPage() {
         setLine(lineRes.data.data);
 
         const runsRes = await apiService.runs.getAll();
-        let lineRun = runsRes.data.data.find((r) => r.line_id === parseInt(lineId));
+        let lineRun = runsRes.data.data.find(
+          (r) => r.line_id === parseInt(lineId),
+        );
 
         if (!lineRun) {
           console.log("No run found, creating one...");
@@ -49,7 +51,9 @@ function LineDetailPage() {
         const stepsRes = await apiService.processSteps.getAll();
         setSteps(stepsRes.data.data);
 
-        const execRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
+        const execRes = await apiService.stepExecutions.getByRun(
+          lineRun.run_id,
+        );
         setExecutions(execRes.data.data);
 
         // Auto-create execution for first step if not exists
@@ -59,7 +63,9 @@ function LineDetailPage() {
             step_id: stepsRes.data.data[0].step_id,
             status: "in_progress",
           });
-          const updatedExecRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
+          const updatedExecRes = await apiService.stepExecutions.getByRun(
+            lineRun.run_id,
+          );
           setExecutions(updatedExecRes.data.data);
         }
       } catch (error) {
@@ -94,9 +100,13 @@ function LineDetailPage() {
         step_id: stepId,
         status: "in_progress",
       });
-      await apiService.stepExecutions.update(newExec.data.data.execution_id, { end_time: isoValue });
+      await apiService.stepExecutions.update(newExec.data.data.execution_id, {
+        end_time: isoValue,
+      });
     } else {
-      await apiService.stepExecutions.update(execution.execution_id, { end_time: isoValue });
+      await apiService.stepExecutions.update(execution.execution_id, {
+        end_time: isoValue,
+      });
     }
     const execRes = await apiService.stepExecutions.getByRun(run.run_id);
     setExecutions(execRes.data.data);
@@ -123,7 +133,9 @@ function LineDetailPage() {
     let endTime = execution.end_time;
 
     if (endInput) {
-      const date = dayjs.isDayjs(endInput) ? endInput.toDate() : new Date(endInput);
+      const date = dayjs.isDayjs(endInput)
+        ? endInput.toDate()
+        : new Date(endInput);
       if (!isNaN(date.getTime())) {
         endTime = date.toISOString();
       }
@@ -135,7 +147,9 @@ function LineDetailPage() {
     }
 
     if (!duration || duration < 0) {
-      alert("End time must be after start time (duration must be positive and non-zero.");
+      alert(
+        "End time must be after start time (duration must be positive and non-zero.",
+      );
       return;
     }
 
@@ -167,7 +181,12 @@ function LineDetailPage() {
       }
 
       const currentStepIndex = steps.findIndex((s) => s.step_id === stepId);
-      console.log("Current step index:", currentStepIndex, "Total steps:", steps.length);
+      console.log(
+        "Current step index:",
+        currentStepIndex,
+        "Total steps:",
+        steps.length,
+      );
 
       if (currentStepIndex >= 0 && currentStepIndex < steps.length - 1) {
         const nextStep = steps[currentStepIndex + 1];
@@ -213,7 +232,8 @@ function LineDetailPage() {
   };
 
   const handleResetTasks = async () => {
-    if (!window.confirm("Reset all tasks? This will clear all progress.")) return;
+    if (!window.confirm("Reset all tasks? This will clear all progress."))
+      return;
     try {
       for (const exec of executions) {
         await apiService.stepExecutions.delete(exec.execution_id);
@@ -245,7 +265,12 @@ function LineDetailPage() {
       >
         Back
       </Button>
-      <Button variant="outlined" color="warning" onClick={handleResetTasks} sx={{ mb: 3, ml: 2 }}>
+      <Button
+        variant="outlined"
+        color="warning"
+        onClick={handleResetTasks}
+        sx={{ mb: 3, ml: 2 }}
+      >
         Reset Task List
       </Button>
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
@@ -283,7 +308,8 @@ function LineDetailPage() {
               const execution = getExecution(step.step_id);
               const startTime = getStartTime(step.step_id);
               const duration = calculateDuration(startTime, execution.end_time);
-              const status = execution.status || (idx === 0 ? "in_progress" : "not_started");
+              const status =
+                execution.status || (idx === 0 ? "in_progress" : "not_started");
               const rowColor =
                 status === "completed"
                   ? "#c8e6c9"
@@ -291,7 +317,9 @@ function LineDetailPage() {
                     ? "#fff9c4"
                     : "inherit";
               const isCompleted = status === "completed";
-              const prevCompleted = idx === 0 || getExecution(steps[idx - 1].step_id).status === "completed";
+              const prevCompleted =
+                idx === 0 ||
+                getExecution(steps[idx - 1].step_id).status === "completed";
               const canSignOff = !isCompleted && prevCompleted;
               return (
                 <TableRow key={step.step_id} sx={{ backgroundColor: rowColor }}>
@@ -299,7 +327,8 @@ function LineDetailPage() {
                   <TableCell>{step.team_name}</TableCell>
                   <TableCell>{step.task_name}</TableCell>
                   <TableCell>
-                    {execution.status || (idx === 0 ? "in_progress" : "not_started")}
+                    {execution.status ||
+                      (idx === 0 ? "in_progress" : "not_started")}
                   </TableCell>
                   <TableCell>
                     <DateTimePicker
@@ -321,9 +350,13 @@ function LineDetailPage() {
                   <TableCell>{duration}</TableCell>
                   <TableCell>
                     {execution.signed_by ? (
-                      <Typography color="success.main">✓ {execution.signed_by}</Typography>
+                      <Typography color="success.main">
+                        ✓ {execution.signed_by}
+                      </Typography>
                     ) : (
-                      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                      <Box
+                        sx={{ display: "flex", gap: 1, alignItems: "center" }}
+                      >
                         <TextField
                           size="small"
                           placeholder="Initials"
@@ -331,10 +364,17 @@ function LineDetailPage() {
                           onChange={(e) =>
                             setInitialsInputs({
                               ...initialsInputs,
-                              [step.step_id]: e.target.value.slice(0, 3).toUpperCase(),
+                              [step.step_id]: e.target.value
+                                .slice(0, 3)
+                                .toUpperCase(),
                             })
                           }
-                          slotProps={{ htmlInput: { maxLength: 3, style: { width: 40, textAlign: "center" } } }}
+                          slotProps={{
+                            htmlInput: {
+                              maxLength: 3,
+                              style: { width: 40, textAlign: "center" },
+                            },
+                          }}
                           disabled={!canSignOff}
                         />
                         <Button

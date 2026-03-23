@@ -17,32 +17,32 @@ class TestLineRepository(unittest.TestCase):
             os.unlink(self.temp_db.name)
 
     def test_create_line(self):
-        line_id = self.repo.create("Line 1")
+        line_id = self.repo.create(1)
         self.assertIsNotNone(line_id)
         self.assertGreater(line_id, 0)
 
     def test_get_all_lines(self):
-        self.repo.create("Line 1")
-        self.repo.create("Line 2")
+        self.repo.create(1)
+        self.repo.create(2)
         lines = self.repo.get_all()
         self.assertEqual(len(lines), 2)
 
     def test_get_by_id(self):
-        line_id = self.repo.create("Line 1")
+        line_id = self.repo.create(1)
         line = self.repo.get_by_id(line_id)
         assert line is not None
-        self.assertEqual(line["line_number"], "Line 1")
+        self.assertEqual(line["line_number"], 1)
 
     def test_update_line(self):
-        line_id = self.repo.create("Line 1")
-        success = self.repo.update(line_id, {"line_number": "Line 1A"})
+        line_id = self.repo.create(1)
+        success = self.repo.update(line_id, {"line_number": 10})
         self.assertTrue(success)
         line = self.repo.get_by_id(line_id)
         assert line is not None
-        self.assertEqual(line["line_number"], "Line 1A")
+        self.assertEqual(line["line_number"], 10)
 
     def test_delete_line(self):
-        line_id = self.repo.create("Line 1")
+        line_id = self.repo.create(1)
         success = self.repo.delete(line_id)
         self.assertTrue(success)
         line = self.repo.get_by_id(line_id)

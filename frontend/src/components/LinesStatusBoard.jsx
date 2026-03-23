@@ -49,7 +49,9 @@ function LinesStatusBoard() {
               step_id: stepsData[0].step_id,
               status: "in_progress",
             });
-            const refetch = await apiService.stepExecutions.getByRun(run.run_id);
+            const refetch = await apiService.stepExecutions.getByRun(
+              run.run_id,
+            );
             allExecutions.push(...refetch.data.data);
           } else {
             allExecutions.push(...execRes.data.data);
@@ -72,11 +74,14 @@ function LinesStatusBoard() {
     if (!run) return { color: "", text: "" };
     const step = steps[stepIndex];
     if (!step) return { color: "", text: "" };
-    const execution = executions.find((e) => e.run_id === run.run_id && e.step_id === step.step_id);
+    const execution = executions.find(
+      (e) => e.run_id === run.run_id && e.step_id === step.step_id,
+    );
     if (!execution) return { color: "", text: "" };
     if (execution.status === "completed")
       return { color: "green", text: execution.signed_by || "✓" };
-    if (execution.status === "in_progress") return { color: "yellow", text: "In Progress" };
+    if (execution.status === "in_progress")
+      return { color: "yellow", text: "In Progress" };
     return { color: "", text: "" };
   };
 
@@ -107,8 +112,12 @@ function LinesStatusBoard() {
               return (
                 <TableRow key={line.line_id}>
                   <TableCell
-                    sx={{ cursor: "pointer", "&:hover": { bgcolor: "action.hover" } }}
-                    onClick={() => navigate(`/line/${line.line_id}`)}                  >
+                    sx={{
+                      cursor: "pointer",
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                    onClick={() => navigate(`/line/${line.line_id}`)}
+                  >
                     {line.line_number}
                   </TableCell>
                   <TableCell>

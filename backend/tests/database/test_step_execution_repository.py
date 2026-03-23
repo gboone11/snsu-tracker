@@ -18,7 +18,7 @@ class TestStepExecutionRepository(unittest.TestCase):
         self.step_repo = ProcessStepRepository(self.db)
         self.repo = StepExecutionRepository(self.db)
 
-        self.line_id = self.line_repo.create("Line 1")
+        self.line_id = self.line_repo.create(1)
         self.run_id = self.run_repo.create(
             self.line_id, "2024-01-01 18:00", "2024-01-02 06:00", "active"
         )

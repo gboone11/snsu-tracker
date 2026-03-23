@@ -15,7 +15,8 @@ function LinesConfigPanel() {
   const [newLine, setNewLine] = useState("");
 
   useEffect(() => {
-    apiService.lines.getAll()
+    apiService.lines
+      .getAll()
       .then((res) => setLines(res.data.data))
       .catch((err) => console.error("Error fetching lines:", err));
   }, []);
@@ -54,7 +55,10 @@ function LinesConfigPanel() {
     const swapIndex = index + direction;
     if (swapIndex < 0 || swapIndex >= lines.length) return;
     const reordered = [...lines];
-    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+    [reordered[index], reordered[swapIndex]] = [
+      reordered[swapIndex],
+      reordered[index],
+    ];
     setLines(reordered);
     try {
       await apiService.lines.reorder(reordered.map((l) => l.line_id));
@@ -95,20 +99,37 @@ function LinesConfigPanel() {
               gap: 0.5,
             }}
           >
-            <IconButton size="small" disabled={i === 0} onClick={() => handleMove(i, -1)}>
+            <IconButton
+              size="small"
+              disabled={i === 0}
+              onClick={() => handleMove(i, -1)}
+            >
               <ArrowUpwardIcon fontSize="small" />
             </IconButton>
-            <IconButton size="small" disabled={i === lines.length - 1} onClick={() => handleMove(i, 1)}>
+            <IconButton
+              size="small"
+              disabled={i === lines.length - 1}
+              onClick={() => handleMove(i, 1)}
+            >
               <ArrowDownwardIcon fontSize="small" />
             </IconButton>
-            <Typography variant="body2" sx={{ flex: 1 }}>Line {line.line_number}</Typography>
-            <IconButton size="small" sx={{ p: 0.25, color: "error.main" }} onClick={() => handleRemove(line)}>
+            <Typography variant="body2" sx={{ flex: 1 }}>
+              Line {line.line_number}
+            </Typography>
+            <IconButton
+              size="small"
+              sx={{ p: 0.25, color: "error.main" }}
+              onClick={() => handleRemove(line)}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>
         ))}
         {lines.length === 0 && (
-          <Typography variant="body2" sx={{ color: "text.secondary", fontStyle: "italic" }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "text.secondary", fontStyle: "italic" }}
+          >
             No lines configured
           </Typography>
         )}

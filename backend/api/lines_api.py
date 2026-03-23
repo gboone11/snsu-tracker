@@ -28,7 +28,9 @@ def create_line(line: LineCreate):
         return {"message": "Line created", "data": {"line_id": line_id}}
     except Exception as e:
         if "UNIQUE constraint" in str(e):
-            raise HTTPException(status_code=409, detail=f"Line {line.line_number} already exists")
+            raise HTTPException(
+                status_code=409, detail=f"Line {line.line_number} already exists"
+            )
         raise HTTPException(status_code=400, detail=str(e))
 
 
