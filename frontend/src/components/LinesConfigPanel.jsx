@@ -6,6 +6,8 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { apiService } from "../services/api";
 
 function LinesConfigPanel() {
@@ -45,8 +47,21 @@ function LinesConfigPanel() {
     }
   };
 
+  const handleMove = async (index, direction) => {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= lines.length) return;
+    const reordered = [...lines];
+    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+    setLines(reordered);
+    try {
+      await apiService.lines.reorder(reordered.map((l) => l.line_id));
+    } catch (error) {
+      console.error("Error reordering lines:", error);
+    }
+  };
+
   return (
-    <Paper sx={{ p: 2.5, mb: 3, bgcolor: "background.paper" }}>
+    <Paper sx={{ flex: 1, p: 2.5, bgcolor: "background.paper" }}>
       <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
         Lines
       </Typography>
@@ -63,26 +78,28 @@ function LinesConfigPanel() {
           + Add Line
         </Button>
       </Box>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-        {lines.map((line) => (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+        {lines.map((line, i) => (
           <Box
             key={line.line_id}
             sx={{
               bgcolor: "background.default",
               px: 1.5,
-              py: 0.75,
+              py: 0.5,
               borderRadius: 1,
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              gap: 0.5,
             }}
           >
-            <Typography variant="body2">Line {line.line_number}</Typography>
-            <IconButton
-              size="small"
-              sx={{ p: 0.25, color: "error.main" }}
-              onClick={() => handleRemove(line)}
-            >
+            <IconButton size="small" disabled={i === 0} onClick={() => handleMove(i, -1)}>
+              <ArrowUpwardIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" disabled={i === lines.length - 1} onClick={() => handleMove(i, 1)}>
+              <ArrowDownwardIcon fontSize="small" />
+            </IconButton>
+            <Typography variant="body2" sx={{ flex: 1 }}>Line {line.line_number}</Typography>
+            <IconButton size="small" sx={{ p: 0.25, color: "error.main" }} onClick={() => handleRemove(line)}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>

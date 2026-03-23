@@ -31,7 +31,7 @@ class TestDatabase(unittest.TestCase):
 
     def test_init_db_creates_indexes(self):
         expected_indexes = [
-            'idx_steps_order', 'idx_runs_line',
+            'idx_lines_order', 'idx_steps_order', 'idx_runs_line',
             'idx_executions_run'
         ]
         

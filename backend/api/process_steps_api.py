@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database.connection import Database
@@ -23,6 +23,10 @@ class ProcessStepUpdate(BaseModel):
     avg_duration_minutes: Optional[int] = None
 
 
+class ReorderRequest(BaseModel):
+    ordered_ids: List[int]
+
+
 @router.post("/process-steps")
 def create_step(step: ProcessStepCreate):
     try:
@@ -36,6 +40,15 @@ def create_step(step: ProcessStepCreate):
 def get_steps():
     steps = step_repo.get_all()
     return {"data": steps}
+
+
+@router.put("/process-steps/reorder")
+def reorder_steps(req: ReorderRequest):
+    try:
+        step_repo.reorder(req.ordered_ids)
+        return {"message": "Steps reordered"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/process-steps/{step_id}")

@@ -6,6 +6,8 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import { apiService } from "../services/api";
 
 function ProcessStepsConfigPanel() {
@@ -48,8 +50,21 @@ function ProcessStepsConfigPanel() {
     }
   };
 
+  const handleMove = async (index, direction) => {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= steps.length) return;
+    const reordered = [...steps];
+    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+    setSteps(reordered);
+    try {
+      await apiService.processSteps.reorder(reordered.map((s) => s.step_id));
+    } catch (error) {
+      console.error("Error reordering steps:", error);
+    }
+  };
+
   return (
-    <Paper sx={{ p: 2.5, mb: 3, bgcolor: "background.paper" }}>
+    <Paper sx={{ flex: 1, p: 2.5, bgcolor: "background.paper" }}>
       <Typography variant="h6" sx={{ mb: 2, color: "primary.main" }}>
         Process Steps
       </Typography>
@@ -73,26 +88,28 @@ function ProcessStepsConfigPanel() {
           + Add Step
         </Button>
       </Box>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-        {steps.map((step) => (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+        {steps.map((step, i) => (
           <Box
             key={step.step_id}
             sx={{
               bgcolor: "background.default",
               px: 1.5,
-              py: 0.75,
+              py: 0.5,
               borderRadius: 1,
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              gap: 0.5,
             }}
           >
-            <Typography variant="body2">{step.team_name} — {step.task_name}</Typography>
-            <IconButton
-              size="small"
-              sx={{ p: 0.25, color: "error.main" }}
-              onClick={() => handleRemove(step)}
-            >
+            <IconButton size="small" disabled={i === 0} onClick={() => handleMove(i, -1)}>
+              <ArrowUpwardIcon fontSize="small" />
+            </IconButton>
+            <IconButton size="small" disabled={i === steps.length - 1} onClick={() => handleMove(i, 1)}>
+              <ArrowDownwardIcon fontSize="small" />
+            </IconButton>
+            <Typography variant="body2" sx={{ flex: 1 }}>{step.team_name} — {step.task_name}</Typography>
+            <IconButton size="small" sx={{ p: 0.25, color: "error.main" }} onClick={() => handleRemove(step)}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Box>

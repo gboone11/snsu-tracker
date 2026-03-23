@@ -13,7 +13,8 @@ export const apiService = {
     getAll: () => api.get('/lines'),
     getById: (id) => api.get(`/lines/${id}`),
     update: (id, data) => api.put(`/lines/${id}`, data),
-    delete: (id) => api.delete(`/lines/${id}`)
+    delete: (id) => api.delete(`/lines/${id}`),
+    reorder: (orderedIds) => api.put('/lines/reorder', { ordered_ids: orderedIds })
   },
   runs: {
     create: (data) => api.post('/runs', data),
@@ -28,7 +29,8 @@ export const apiService = {
     getAll: () => api.get('/process-steps'),
     getById: (id) => api.get(`/process-steps/${id}`),
     update: (id, data) => api.put(`/process-steps/${id}`, data),
-    delete: (id) => api.delete(`/process-steps/${id}`)
+    delete: (id) => api.delete(`/process-steps/${id}`),
+    reorder: (orderedIds) => api.put('/process-steps/reorder', { ordered_ids: orderedIds })
   },
   stepExecutions: {
     create: (data) => api.post('/step-executions', data),

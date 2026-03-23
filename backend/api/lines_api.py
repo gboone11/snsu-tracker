@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database.connection import Database
@@ -17,6 +17,10 @@ class LineUpdate(BaseModel):
     line_number: Optional[str] = None
 
 
+class ReorderRequest(BaseModel):
+    ordered_ids: List[int]
+
+
 @router.post("/lines")
 def create_line(line: LineCreate):
     try:
@@ -30,6 +34,15 @@ def create_line(line: LineCreate):
 def get_lines():
     lines = line_repo.get_all()
     return {"data": lines}
+
+
+@router.put("/lines/reorder")
+def reorder_lines(req: ReorderRequest):
+    try:
+        line_repo.reorder(req.ordered_ids)
+        return {"message": "Lines reordered"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/lines/{line_id}")

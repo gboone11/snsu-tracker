@@ -7,16 +7,23 @@ class LineRepository:
 
     def create(self, line_number: str) -> int:
         with self.db.get_connection() as conn:
+            cursor = conn.execute("SELECT COALESCE(MAX(display_order), 0) + 1 FROM lines")
+            next_order = cursor.fetchone()[0]
             cursor = conn.execute(
-                "INSERT INTO lines (line_number) VALUES (?)",
-                (line_number,)
+                "INSERT INTO lines (line_number, display_order) VALUES (?, ?)",
+                (line_number, next_order)
             )
             return cursor.lastrowid
 
     def get_all(self) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
-            cursor = conn.execute("SELECT * FROM lines")
+            cursor = conn.execute("SELECT * FROM lines ORDER BY display_order")
             return [dict(row) for row in cursor.fetchall()]
+
+    def reorder(self, ordered_ids: List[int]) -> None:
+        with self.db.get_connection() as conn:
+            for order, line_id in enumerate(ordered_ids, start=1):
+                conn.execute("UPDATE lines SET display_order = ? WHERE line_id = ?", (order, line_id))
 
     def get_by_id(self, line_id: int) -> Optional[Dict[str, Any]]:
         with self.db.get_connection() as conn:
