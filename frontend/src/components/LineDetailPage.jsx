@@ -24,6 +24,7 @@ function LineDetailPage() {
   const [steps, setSteps] = useState([]);
   const [executions, setExecutions] = useState([]);
   const [timeInputs, setTimeInputs] = useState({});
+  const [initialsInputs, setInitialsInputs] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,6 +105,11 @@ function LineDetailPage() {
   };
 
   const handleSignOff = async (stepId) => {
+    const initials = (initialsInputs[stepId] || "").trim();
+    if (!initials || initials.length < 2 || initials.length > 3) {
+      alert("Please enter 2 or 3 character initials.");
+      return;
+    }
     console.log("=== SIGN OFF START ===", { stepId, run });
     if (!run) {
       console.log("❌ No run found, exiting");
@@ -151,7 +157,7 @@ function LineDetailPage() {
           start_time: startTime,
           end_time: endTime,
           duration_minutes: duration,
-          signed_by: "User",
+          signed_by: initials,
           signed_at: new Date().toISOString(),
         });
         console.log("✓ Created execution");
@@ -162,7 +168,7 @@ function LineDetailPage() {
           start_time: startTime,
           end_time: endTime,
           duration_minutes: duration,
-          signed_by: "User",
+          signed_by: initials,
           signed_at: new Date().toISOString(),
         });
         console.log("✓ Updated execution");
@@ -330,13 +336,27 @@ function LineDetailPage() {
                     {execution.signed_by ? (
                       <Typography color="success.main">✓ {execution.signed_by}</Typography>
                     ) : (
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => handleSignOff(step.step_id)}
-                      >
-                        Sign Off
-                      </Button>
+                      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                        <TextField
+                          size="small"
+                          placeholder="Initials"
+                          value={initialsInputs[step.step_id] || ""}
+                          onChange={(e) =>
+                            setInitialsInputs({
+                              ...initialsInputs,
+                              [step.step_id]: e.target.value.slice(0, 3).toUpperCase(),
+                            })
+                          }
+                          inputProps={{ maxLength: 3, style: { width: 40, textAlign: "center" } }}
+                        />
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={() => handleSignOff(step.step_id)}
+                        >
+                          Sign Off
+                        </Button>
+                      </Box>
                     )}
                   </TableCell>
                 </TableRow>
