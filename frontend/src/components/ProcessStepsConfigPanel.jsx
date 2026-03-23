@@ -35,6 +35,7 @@ function ProcessStepsConfigPanel() {
       setSteps(res.data.data);
       setNewTeam("");
       setNewTask("");
+      await resetAllExecutions(res.data.data[0]?.step_id);
     } catch (error) {
       alert("Error adding step: " + error.message);
     }
@@ -44,9 +45,32 @@ function ProcessStepsConfigPanel() {
     if (!window.confirm(`Remove step "${step.team_name} — ${step.task_name}"?`)) return;
     try {
       await apiService.processSteps.delete(step.step_id);
-      setSteps(steps.filter((s) => s.step_id !== step.step_id));
+      const remaining = steps.filter((s) => s.step_id !== step.step_id);
+      setSteps(remaining);
+      await resetAllExecutions(remaining[0]?.step_id);
     } catch (error) {
       alert("Error removing step: " + error.message);
+    }
+  };
+
+  const resetAllExecutions = async (firstStepId) => {
+    try {
+      const runsRes = await apiService.runs.getAll();
+      for (const run of runsRes.data.data) {
+        const execRes = await apiService.stepExecutions.getByRun(run.run_id);
+        for (const exec of execRes.data.data) {
+          await apiService.stepExecutions.delete(exec.execution_id);
+        }
+        if (firstStepId) {
+          await apiService.stepExecutions.create({
+            run_id: run.run_id,
+            step_id: firstStepId,
+            status: "in_progress",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error resetting executions:", error);
     }
   };
 
@@ -58,6 +82,7 @@ function ProcessStepsConfigPanel() {
     setSteps(reordered);
     try {
       await apiService.processSteps.reorder(reordered.map((s) => s.step_id));
+      await resetAllExecutions(reordered[0]?.step_id);
     } catch (error) {
       console.error("Error reordering steps:", error);
     }

@@ -10,11 +10,11 @@ line_repo = LineRepository(db)
 
 
 class LineCreate(BaseModel):
-    line_number: str
+    line_number: int
 
 
 class LineUpdate(BaseModel):
-    line_number: Optional[str] = None
+    line_number: Optional[int] = None
 
 
 class ReorderRequest(BaseModel):
@@ -27,6 +27,8 @@ def create_line(line: LineCreate):
         line_id = line_repo.create(line.line_number)
         return {"message": "Line created", "data": {"line_id": line_id}}
     except Exception as e:
+        if "UNIQUE constraint" in str(e):
+            raise HTTPException(status_code=409, detail=f"Line {line.line_number} already exists")
         raise HTTPException(status_code=400, detail=str(e))
 
 

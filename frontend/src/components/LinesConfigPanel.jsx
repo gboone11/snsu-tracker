@@ -21,10 +21,9 @@ function LinesConfigPanel() {
   }, []);
 
   const handleAdd = async () => {
-    const lineNum = newLine.trim();
-    if (!lineNum) return;
-    if (lines.some((l) => l.line_number === lineNum)) {
-      alert("Line already exists");
+    const lineNum = parseInt(newLine.trim(), 10);
+    if (!lineNum || lineNum <= 0) {
+      alert("Please enter a valid positive number");
       return;
     }
     try {
@@ -33,7 +32,11 @@ function LinesConfigPanel() {
       setLines(res.data.data);
       setNewLine("");
     } catch (error) {
-      alert("Error adding line: " + error.message);
+      if (error.response?.status === 409) {
+        alert(error.response.data.detail);
+      } else {
+        alert("Error adding line: " + error.message);
+      }
     }
   };
 
