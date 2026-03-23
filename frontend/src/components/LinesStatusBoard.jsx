@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -107,6 +107,46 @@ function LinesStatusBoard() {
     return { color: "", text: "" };
   };
 
+  const randomEndTimes = useMemo(() => {
+    const today = new Date();
+    const daysSinceFriday = (today.getDay() + 2) % 7;
+    return Object.fromEntries(
+      lines.map((line) => {
+        const friday = new Date(today);
+        friday.setDate(today.getDate() - daysSinceFriday);
+        /* eslint-disable */
+        friday.setHours(
+          Math.floor(Math.random() * 9) + 15,
+          Math.floor(Math.random() * 60),
+          Math.floor(Math.random() * 60),
+          0,
+        ); 
+        /* eslint-enable */
+        return [line.line_id, friday.toLocaleString()];
+      }),
+    );
+  }, [lines]);
+
+  const randomStartTimes = useMemo(() => {
+    const today = new Date();
+    const daysSinceMonday = (today.getDay() + 6) % 7;
+    return Object.fromEntries(
+      lines.map((line) => {
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - daysSinceMonday);
+        /* eslint-disable */
+        monday.setHours(
+          Math.floor(Math.random() * 5) + 7,
+          Math.floor(Math.random() * 60),
+          Math.floor(Math.random() * 60),
+          0,
+        ); 
+        /* eslint-enable */
+        return [line.line_id, monday.toLocaleString()];
+      }),
+    );
+  }, [lines]);
+
   return (
     <Paper sx={{ p: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -141,7 +181,7 @@ function LinesStatusBoard() {
                   <small>{step.task_name}</small>
                 </TableCell>
               ))}
-              <TableCell>Time Till Startup</TableCell>
+              <TableCell>Work Order Starts</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -154,7 +194,7 @@ function LinesStatusBoard() {
                   >
                     {line.line_number}
                   </TableCell>
-                  <TableCell>{"-"}</TableCell>
+                  <TableCell>{randomEndTimes[line.line_id]}</TableCell>
                   {steps.map((step, i) => {
                     const status = getStepStatus(line.line_id, i);
                     return (
@@ -173,7 +213,7 @@ function LinesStatusBoard() {
                       </TableCell>
                     );
                   })}
-                  <TableCell>{"-"}</TableCell>
+                  <TableCell>{randomStartTimes[line.line_id]}</TableCell>
                 </TableRow>
               );
             })}
