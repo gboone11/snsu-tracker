@@ -58,7 +58,7 @@ def update_line(line_id: int, line: LineUpdate):
     updates = {k: v for k, v in line.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
-    
+
     success = line_repo.update(line_id, updates)
     if not success:
         raise HTTPException(status_code=404, detail="Line not found")

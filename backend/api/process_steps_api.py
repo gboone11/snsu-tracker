@@ -30,7 +30,9 @@ class ReorderRequest(BaseModel):
 @router.post("/process-steps")
 def create_step(step: ProcessStepCreate):
     try:
-        step_id = step_repo.create(step.step_order, step.team_name, step.task_name, step.avg_duration_minutes)
+        step_id = step_repo.create(
+            step.step_order, step.team_name, step.task_name, step.avg_duration_minutes
+        )
         return {"message": "Step created", "data": {"step_id": step_id}}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

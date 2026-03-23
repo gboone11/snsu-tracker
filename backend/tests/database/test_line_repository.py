@@ -7,7 +7,7 @@ from database.line_repository import LineRepository
 
 class TestLineRepository(unittest.TestCase):
     def setUp(self):
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
         self.temp_db.close()
         self.db = Database(db_path=self.temp_db.name)
         self.repo = LineRepository(self.db)
@@ -30,7 +30,7 @@ class TestLineRepository(unittest.TestCase):
     def test_get_by_id(self):
         line_id = self.repo.create("Line 1")
         line = self.repo.get_by_id(line_id)
-        self.assertIsNotNone(line)
+        assert line is not None
         self.assertEqual(line["line_number"], "Line 1")
 
     def test_update_line(self):
@@ -38,6 +38,7 @@ class TestLineRepository(unittest.TestCase):
         success = self.repo.update(line_id, {"line_number": "Line 1A"})
         self.assertTrue(success)
         line = self.repo.get_by_id(line_id)
+        assert line is not None
         self.assertEqual(line["line_number"], "Line 1A")
 
     def test_delete_line(self):
@@ -48,5 +49,5 @@ class TestLineRepository(unittest.TestCase):
         self.assertIsNone(line)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

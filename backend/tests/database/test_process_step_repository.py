@@ -7,7 +7,7 @@ from database.process_step_repository import ProcessStepRepository
 
 class TestProcessStepRepository(unittest.TestCase):
     def setUp(self):
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
         self.temp_db.close()
         self.db = Database(db_path=self.temp_db.name)
         self.repo = ProcessStepRepository(self.db)
@@ -30,7 +30,7 @@ class TestProcessStepRepository(unittest.TestCase):
     def test_get_by_id(self):
         step_id = self.repo.create(1, "Sanitation", "Clean line", 30)
         step = self.repo.get_by_id(step_id)
-        self.assertIsNotNone(step)
+        assert step is not None
         self.assertEqual(step["task_name"], "Clean line")
 
     def test_update_process_step(self):
@@ -38,6 +38,7 @@ class TestProcessStepRepository(unittest.TestCase):
         success = self.repo.update(step_id, {"avg_duration_minutes": 45})
         self.assertTrue(success)
         step = self.repo.get_by_id(step_id)
+        assert step is not None
         self.assertEqual(step["avg_duration_minutes"], 45)
 
     def test_delete_process_step(self):
@@ -48,5 +49,5 @@ class TestProcessStepRepository(unittest.TestCase):
         self.assertIsNone(step)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

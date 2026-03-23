@@ -10,16 +10,18 @@ from database.step_execution_repository import StepExecutionRepository
 
 class TestStepExecutionRepository(unittest.TestCase):
     def setUp(self):
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
         self.temp_db.close()
         self.db = Database(db_path=self.temp_db.name)
         self.line_repo = LineRepository(self.db)
         self.run_repo = RunRepository(self.db)
         self.step_repo = ProcessStepRepository(self.db)
         self.repo = StepExecutionRepository(self.db)
-        
+
         self.line_id = self.line_repo.create("Line 1")
-        self.run_id = self.run_repo.create(self.line_id, "2024-01-01 18:00", "2024-01-02 06:00", "active")
+        self.run_id = self.run_repo.create(
+            self.line_id, "2024-01-01 18:00", "2024-01-02 06:00", "active"
+        )
         self.step_id = self.step_repo.create(1, "Sanitation", "Clean", 30)
 
     def tearDown(self):
@@ -39,7 +41,7 @@ class TestStepExecutionRepository(unittest.TestCase):
     def test_get_by_id(self):
         execution_id = self.repo.create(self.run_id, self.step_id, "not-started")
         execution = self.repo.get_by_id(execution_id)
-        self.assertIsNotNone(execution)
+        assert execution is not None
         self.assertEqual(execution["status"], "not-started")
 
     def test_update_step_execution(self):
@@ -47,6 +49,7 @@ class TestStepExecutionRepository(unittest.TestCase):
         success = self.repo.update(execution_id, {"status": "completed"})
         self.assertTrue(success)
         execution = self.repo.get_by_id(execution_id)
+        assert execution is not None
         self.assertEqual(execution["status"], "completed")
 
     def test_delete_step_execution(self):
@@ -57,5 +60,5 @@ class TestStepExecutionRepository(unittest.TestCase):
         self.assertIsNone(execution)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

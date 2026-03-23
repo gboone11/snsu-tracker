@@ -27,7 +27,9 @@ class StepExecutionUpdate(BaseModel):
 @router.post("/step-executions")
 def create_execution(execution: StepExecutionCreate):
     try:
-        execution_id = execution_repo.create(execution.run_id, execution.step_id, execution.status)
+        execution_id = execution_repo.create(
+            execution.run_id, execution.step_id, execution.status
+        )
         return {"message": "Execution created", "data": {"execution_id": execution_id}}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

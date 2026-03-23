@@ -11,7 +11,7 @@ from api.step_executions_api import router as step_executions_router
 app = FastAPI(title="SNSU Tracker API", version="1.0.0")
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore[arg-type]
     allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
