@@ -12,6 +12,8 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import dayjs from "dayjs";
 import { apiService } from "../services/api";
 
 function LineDetailPage() {
@@ -37,8 +39,6 @@ function LineDetailPage() {
           console.log("No run found, creating one...");
           const newRunRes = await apiService.runs.create({
             line_id: parseInt(lineId),
-            work_order_end_time: new Date().toISOString(),
-            target_ready_time: new Date().toISOString(),
             status: "in_progress",
           });
           lineRun = newRunRes.data.data;
@@ -73,17 +73,17 @@ function LineDetailPage() {
     return executions.find((e) => e.step_id === stepId) || {};
   };
 
-  const handleTimeChange = async (stepId, field, value) => {
-    if (!value) return;
-    if (!run) {
-      console.log("No run in handleTimeChange");
-      return;
-    }
-    const date = new Date(value);
-    if (isNaN(date.getTime())) {
-      alert("Invalid date format. Use MM/DD/YYYY HH:MM AM/PM");
-      return;
-    }
+  const getStartTime = (stepId) => {
+    const idx = steps.findIndex((s) => s.step_id === stepId);
+    if (idx <= 0) return run?.work_order_end_time || null;
+    const prevExec = getExecution(steps[idx - 1].step_id);
+    return prevExec.end_time || null;
+  };
+
+  const handleTimeChange = async (stepId, value) => {
+    if (!value || !run) return;
+    const date = dayjs.isDayjs(value) ? value.toDate() : new Date(value);
+    if (isNaN(date.getTime())) return;
 
     const execution = getExecution(stepId);
     const isoValue = date.toISOString();
@@ -94,9 +94,9 @@ function LineDetailPage() {
         step_id: stepId,
         status: "in_progress",
       });
-      await apiService.stepExecutions.update(newExec.data.data.execution_id, { [field]: isoValue });
+      await apiService.stepExecutions.update(newExec.data.data.execution_id, { end_time: isoValue });
     } else {
-      await apiService.stepExecutions.update(execution.execution_id, { [field]: isoValue });
+      await apiService.stepExecutions.update(execution.execution_id, { end_time: isoValue });
     }
     const execRes = await apiService.stepExecutions.getByRun(run.run_id);
     setExecutions(execRes.data.data);
@@ -117,32 +117,26 @@ function LineDetailPage() {
     const execution = getExecution(stepId);
     console.log("Current execution:", execution);
 
-    const startInput = timeInputs[`${stepId}-start_time`];
     const endInput = timeInputs[`${stepId}-end_time`];
-    console.log("Time inputs:", { startInput, endInput });
 
-    let startTime = execution.start_time;
+    let startTime = getStartTime(stepId);
     let endTime = execution.end_time;
 
-    if (startInput) {
-      const date = new Date(startInput);
-      if (!isNaN(date.getTime())) {
-        startTime = date.toISOString();
-        console.log("✓ Converted start time:", startTime);
-      }
-    }
     if (endInput) {
-      const date = new Date(endInput);
+      const date = dayjs.isDayjs(endInput) ? endInput.toDate() : new Date(endInput);
       if (!isNaN(date.getTime())) {
         endTime = date.toISOString();
-        console.log("✓ Converted end time:", endTime);
       }
     }
 
     let duration = null;
     if (startTime && endTime) {
       duration = Math.round((new Date(endTime) - new Date(startTime)) / 60000);
-      console.log("✓ Calculated duration:", duration);
+    }
+
+    if (!duration || duration < 0) {
+      alert("End time must be after start time (duration must be positive and non-zero.");
+      return;
     }
 
     try {
@@ -257,6 +251,20 @@ function LineDetailPage() {
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
         Line {line.line_number} - SNSU Process
       </Typography>
+      <Paper sx={{ p: 2, mb: 3, display: "flex", gap: 4 }}>
+        <Typography>
+          <strong>WO Ended:</strong>{" "}
+          {run?.work_order_end_time
+            ? new Date(run.work_order_end_time).toLocaleString()
+            : "-"}
+        </Typography>
+        <Typography>
+          <strong>Target Start:</strong>{" "}
+          {run?.target_ready_time
+            ? new Date(run.target_ready_time).toLocaleString()
+            : "-"}
+        </Typography>
+      </Paper>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -265,7 +273,6 @@ function LineDetailPage() {
               <TableCell>Team</TableCell>
               <TableCell>Task</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Start Time</TableCell>
               <TableCell>End Time</TableCell>
               <TableCell>Duration (min)</TableCell>
               <TableCell>Sign Off</TableCell>
@@ -274,7 +281,8 @@ function LineDetailPage() {
           <TableBody>
             {steps.map((step, idx) => {
               const execution = getExecution(step.step_id);
-              const duration = calculateDuration(execution.start_time, execution.end_time);
+              const startTime = getStartTime(step.step_id);
+              const duration = calculateDuration(startTime, execution.end_time);
               const status = execution.status || (idx === 0 ? "in_progress" : "not_started");
               const rowColor =
                 status === "completed"
@@ -292,40 +300,19 @@ function LineDetailPage() {
                     {execution.status || (idx === 0 ? "in_progress" : "not_started")}
                   </TableCell>
                   <TableCell>
-                    <TextField
-                      size="small"
-                      placeholder="MM/DD/YYYY HH:MM AM/PM"
-                      value={
-                        timeInputs[`${step.step_id}-start_time`] ??
-                        (execution.start_time
-                          ? new Date(execution.start_time).toLocaleString()
-                          : "")
-                      }
-                      onChange={(e) =>
-                        setTimeInputs({
-                          ...timeInputs,
-                          [`${step.step_id}-start_time`]: e.target.value,
-                        })
-                      }
-                      onBlur={(e) => handleTimeChange(step.step_id, "start_time", e.target.value)}
-                      disabled={isCompleted}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      size="small"
-                      placeholder="MM/DD/YYYY HH:MM AM/PM"
+                    <DateTimePicker
+                      slotProps={{ textField: { size: "small" } }}
                       value={
                         timeInputs[`${step.step_id}-end_time`] ??
-                        (execution.end_time ? new Date(execution.end_time).toLocaleString() : "")
+                        (execution.end_time ? dayjs(execution.end_time) : null)
                       }
-                      onChange={(e) =>
+                      onChange={(newValue) => {
                         setTimeInputs({
                           ...timeInputs,
-                          [`${step.step_id}-end_time`]: e.target.value,
-                        })
-                      }
-                      onBlur={(e) => handleTimeChange(step.step_id, "end_time", e.target.value)}
+                          [`${step.step_id}-end_time`]: newValue,
+                        });
+                        handleTimeChange(step.step_id, newValue);
+                      }}
                       disabled={isCompleted}
                     />
                   </TableCell>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
@@ -37,8 +37,6 @@ function LinesStatusBoard() {
           if (!allRuns.find((r) => r.line_id === line.line_id)) {
             const newRunRes = await apiService.runs.create({
               line_id: line.line_id,
-              work_order_end_time: new Date().toISOString(),
-              target_ready_time: new Date().toISOString(),
               status: "in_progress",
             });
             allRuns.push(newRunRes.data.data);
@@ -81,46 +79,6 @@ function LinesStatusBoard() {
     return { color: "", text: "" };
   };
 
-  const randomEndTimes = useMemo(() => {
-    const today = new Date();
-    const daysSinceFriday = (today.getDay() + 2) % 7;
-    return Object.fromEntries(
-      lines.map((line) => {
-        const friday = new Date(today);
-        friday.setDate(today.getDate() - daysSinceFriday);
-        /* eslint-disable */
-        friday.setHours(
-          Math.floor(Math.random() * 9) + 15,
-          Math.floor(Math.random() * 60),
-          Math.floor(Math.random() * 60),
-          0,
-        );
-        /* eslint-enable */
-        return [line.line_id, friday.toLocaleString()];
-      }),
-    );
-  }, [lines]);
-
-  const randomStartTimes = useMemo(() => {
-    const today = new Date();
-    const daysSinceMonday = (today.getDay() + 6) % 7;
-    return Object.fromEntries(
-      lines.map((line) => {
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - daysSinceMonday);
-        /* eslint-disable */
-        monday.setHours(
-          Math.floor(Math.random() * 5) + 7,
-          Math.floor(Math.random() * 60),
-          Math.floor(Math.random() * 60),
-          0,
-        );
-        /* eslint-enable */
-        return [line.line_id, monday.toLocaleString()];
-      }),
-    );
-  }, [lines]);
-
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
@@ -139,11 +97,12 @@ function LinesStatusBoard() {
                   <small>{step.task_name}</small>
                 </TableCell>
               ))}
-              <TableCell sx={{ width: 190 }}>Work Order Starts</TableCell>
+              <TableCell sx={{ width: 190 }}>Target Ready Time</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {lines.map((line) => {
+              const lineRun = runs.find((r) => r.line_id === line.line_id);
               return (
                 <TableRow key={line.line_id}>
                   <TableCell
@@ -151,7 +110,11 @@ function LinesStatusBoard() {
                     onClick={() => navigate(`/line/${line.line_id}`)}                  >
                     {line.line_number}
                   </TableCell>
-                  <TableCell>{randomEndTimes[line.line_id]}</TableCell>
+                  <TableCell>
+                    {lineRun?.work_order_end_time
+                      ? new Date(lineRun.work_order_end_time).toLocaleString()
+                      : "-"}
+                  </TableCell>
                   {steps.map((step, i) => {
                     const status = getStepStatus(line.line_id, i);
                     return (
@@ -168,7 +131,11 @@ function LinesStatusBoard() {
                       ></TableCell>
                     );
                   })}
-                  <TableCell>{randomStartTimes[line.line_id]}</TableCell>
+                  <TableCell>
+                    {lineRun?.target_ready_time
+                      ? new Date(lineRun.target_ready_time).toLocaleString()
+                      : "-"}
+                  </TableCell>
                 </TableRow>
               );
             })}

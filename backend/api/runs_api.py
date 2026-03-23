@@ -1,3 +1,5 @@
+import random
+from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -9,10 +11,29 @@ db = Database()
 run_repo = RunRepository(db)
 
 
+def _generate_random_times():
+    today = datetime.now()
+    days_since_friday = (today.weekday() - 4) % 7 or 7
+    friday = (today - timedelta(days=days_since_friday)).replace(
+        hour=random.randint(15, 23),
+        minute=random.randint(0, 59),
+        second=0,
+        microsecond=0,
+    )
+    days_since_monday = (today.weekday() - 0) % 7
+    monday = (today - timedelta(days=days_since_monday)).replace(
+        hour=random.randint(7, 11),
+        minute=random.randint(0, 59),
+        second=0,
+        microsecond=0,
+    )
+    return friday.isoformat(), monday.isoformat()
+
+
 class RunCreate(BaseModel):
     line_id: int
-    work_order_end_time: str
-    target_ready_time: str
+    work_order_end_time: Optional[str] = None
+    target_ready_time: Optional[str] = None
     status: str
 
 
@@ -25,7 +46,11 @@ class RunUpdate(BaseModel):
 @router.post("/runs")
 def create_run(run: RunCreate):
     try:
-        run_id = run_repo.create(run.line_id, run.work_order_end_time, run.target_ready_time, run.status)
+        wo_end = run.work_order_end_time
+        target_ready = run.target_ready_time
+        if not wo_end or not target_ready:
+            wo_end, target_ready = _generate_random_times()
+        run_id = run_repo.create(run.line_id, wo_end, target_ready, run.status)
         created_run = run_repo.get_by_id(run_id)
         return {"message": "Run created", "data": created_run}
     except Exception as e:
