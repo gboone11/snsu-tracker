@@ -120,7 +120,7 @@ function LinesStatusBoard() {
           Math.floor(Math.random() * 60),
           Math.floor(Math.random() * 60),
           0,
-        ); 
+        );
         /* eslint-enable */
         return [line.line_id, friday.toLocaleString()];
       }),
@@ -140,7 +140,7 @@ function LinesStatusBoard() {
           Math.floor(Math.random() * 60),
           Math.floor(Math.random() * 60),
           0,
-        ); 
+        );
         /* eslint-enable */
         return [line.line_id, monday.toLocaleString()];
       }),
@@ -208,9 +208,7 @@ function LinesStatusBoard() {
                                 ? "#fff9c4"
                                 : "transparent",
                         }}
-                      >
-                        {""}
-                      </TableCell>
+                      ></TableCell>
                     );
                   })}
                   <TableCell>{randomStartTimes[line.line_id]}</TableCell>
