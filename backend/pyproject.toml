@@ -7,9 +7,12 @@ requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.135.1",
     "pydantic>=2.0.0",
-    "requests>=2.32.5",
-    "uvicorn>=0.42.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "uvicorn>=0.42.0",
+]
