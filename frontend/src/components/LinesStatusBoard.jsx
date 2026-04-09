@@ -107,7 +107,13 @@ function LinesStatusBoard() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {lines.map((line) => {
+            {[...lines].sort((a, b) => {
+              const runA = runs.find((r) => r.line_id === a.line_id);
+              const runB = runs.find((r) => r.line_id === b.line_id);
+              const timeA = runA?.target_ready_time ? new Date(runA.target_ready_time).getTime() : Infinity;
+              const timeB = runB?.target_ready_time ? new Date(runB.target_ready_time).getTime() : Infinity;
+              return timeA - timeB;
+            }).map((line) => {
               const lineRun = runs.find((r) => r.line_id === line.line_id);
               return (
                 <TableRow key={line.line_id}>
