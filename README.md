@@ -10,4 +10,4 @@ For instructions on how to set up and run demo, go to [START-UP-INSTRUCTIONS.md]
 
 For documentation on the internal API, go to [API_DOCUMENTATION.md](backend\API_DOCUMENTATION.md).
 
-Dev to do [here] (https://est1933-my.sharepoint.com/personal/bradley_soares_ejgallo_com/Lists/SNSU%20Flight%20Board%20Project%20Development/AllItems.aspx)
+Dev to do [here](https://est1933-my.sharepoint.com/personal/bradley_soares_ejgallo_com/Lists/SNSU%20Flight%20Board%20Project%20Development/AllItems.aspx)
