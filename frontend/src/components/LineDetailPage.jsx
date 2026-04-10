@@ -13,6 +13,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import { apiService } from "../services/api";
 import TaskWindow from "./TaskWindow";
+import WarehouseTaskWindow from "./WarehouseTaskWindow";
 
 function LineDetailPage() {
   const { lineId } = useParams();
@@ -23,6 +24,7 @@ function LineDetailPage() {
   const [executions, setExecutions] = useState([]);
   const [taskWindowOpen, setTaskWindowOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState(null);
+  const [warehouseWindowOpen, setWarehouseWindowOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,9 +35,7 @@ function LineDetailPage() {
         if (cancelled) return;
 
         const runsRes = await apiService.runs.getAll();
-        let lineRun = runsRes.data.data.find(
-          (r) => r.line_id === parseInt(lineId),
-        );
+        let lineRun = runsRes.data.data.find((r) => r.line_id === parseInt(lineId));
 
         if (!lineRun) {
           const newRunRes = await apiService.runs.create({
@@ -46,9 +46,7 @@ function LineDetailPage() {
         }
 
         const stepsRes = await apiService.processSteps.getAll();
-        const execRes = await apiService.stepExecutions.getByRun(
-          lineRun.run_id,
-        );
+        const execRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
 
         let execData = execRes.data.data;
         if (stepsRes.data.data.length > 0 && execData.length === 0) {
@@ -57,9 +55,7 @@ function LineDetailPage() {
             step_id: stepsRes.data.data[0].step_id,
             status: "in_progress",
           });
-          const updatedExecRes = await apiService.stepExecutions.getByRun(
-            lineRun.run_id,
-          );
+          const updatedExecRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
           execData = updatedExecRes.data.data;
         }
 
@@ -85,13 +81,15 @@ function LineDetailPage() {
     setExecutions(execRes.data.data);
   };
 
-  const getExecution = (stepId) =>
-    executions.find((e) => e.step_id === stepId) || {};
+  const defaultStep = steps.find((s) => s.is_default);
+  const regularSteps = steps.filter((s) => !s.is_default);
+
+  const getExecution = (stepId) => executions.find((e) => e.step_id === stepId) || {};
 
   const getStartTime = (stepId) => {
-    const idx = steps.findIndex((s) => s.step_id === stepId);
+    const idx = regularSteps.findIndex((s) => s.step_id === stepId);
     if (idx <= 0) return run?.work_order_end_time || null;
-    const prevExec = getExecution(steps[idx - 1].step_id);
+    const prevExec = getExecution(regularSteps[idx - 1].step_id);
     return prevExec.end_time || null;
   };
 
@@ -101,8 +99,13 @@ function LineDetailPage() {
   };
 
   const handleOpenTask = (step) => {
-    setSelectedStep(step);
-    setTaskWindowOpen(true);
+    if (step.is_default) {
+      setSelectedStep(step);
+      setWarehouseWindowOpen(true);
+    } else {
+      setSelectedStep(step);
+      setTaskWindowOpen(true);
+    }
   };
 
   const handleSignOff = async (stepId, initials, endTimeIso) => {
@@ -152,9 +155,9 @@ function LineDetailPage() {
         });
       }
 
-      const currentStepIndex = steps.findIndex((s) => s.step_id === stepId);
-      if (currentStepIndex >= 0 && currentStepIndex < steps.length - 1) {
-        const nextStep = steps[currentStepIndex + 1];
+      const currentStepIndex = regularSteps.findIndex((s) => s.step_id === stepId);
+      if (currentStepIndex >= 0 && currentStepIndex < regularSteps.length - 1) {
+        const nextStep = regularSteps[currentStepIndex + 1];
         const nextExecution = getExecution(nextStep.step_id);
         if (!nextExecution.execution_id) {
           await apiService.stepExecutions.create({
@@ -177,16 +180,15 @@ function LineDetailPage() {
   };
 
   const handleResetTasks = async () => {
-    if (!window.confirm("Reset all tasks? This will clear all progress."))
-      return;
+    if (!window.confirm("Reset all tasks? This will clear all progress.")) return;
     try {
       for (const exec of executions) {
         await apiService.stepExecutions.delete(exec.execution_id);
       }
-      if (steps.length > 0) {
+      if (regularSteps.length > 0) {
         await apiService.stepExecutions.create({
           run_id: run.run_id,
-          step_id: steps[0].step_id,
+          step_id: regularSteps[0].step_id,
           status: "in_progress",
         });
       }
@@ -198,16 +200,14 @@ function LineDetailPage() {
 
   if (!line) return <Box sx={{ p: 3 }}>Loading...</Box>;
 
-  const selectedExecution = selectedStep
-    ? getExecution(selectedStep.step_id)
-    : {};
+  const selectedExecution = selectedStep ? getExecution(selectedStep.step_id) : {};
   const selectedIdx = selectedStep
-    ? steps.findIndex((s) => s.step_id === selectedStep.step_id)
+    ? regularSteps.findIndex((s) => s.step_id === selectedStep.step_id)
     : -1;
   const selectedIsCompleted = selectedExecution?.status === "completed";
   const selectedPrevCompleted =
     selectedIdx === 0 ||
-    getExecution(steps[selectedIdx - 1]?.step_id)?.status === "completed";
+    getExecution(regularSteps[selectedIdx - 1]?.step_id)?.status === "completed";
   const selectedCanSignOff = !selectedIsCompleted && selectedPrevCompleted;
 
   return (
@@ -220,12 +220,7 @@ function LineDetailPage() {
       >
         Back
       </Button>
-      <Button
-        variant="outlined"
-        color="warning"
-        onClick={handleResetTasks}
-        sx={{ mb: 3, ml: 2 }}
-      >
+      <Button variant="outlined" color="warning" onClick={handleResetTasks} sx={{ mb: 3, ml: 2 }}>
         Reset Task List
       </Button>
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
@@ -234,17 +229,50 @@ function LineDetailPage() {
       <Paper sx={{ p: 2, mb: 3, display: "flex", gap: 4 }}>
         <Typography>
           <strong>WO Ended:</strong>{" "}
-          {run?.work_order_end_time
-            ? new Date(run.work_order_end_time).toLocaleString()
-            : "-"}
+          {run?.work_order_end_time ? new Date(run.work_order_end_time).toLocaleString() : "-"}
         </Typography>
         <Typography>
           <strong>Target Start:</strong>{" "}
-          {run?.target_ready_time
-            ? new Date(run.target_ready_time).toLocaleString()
-            : "-"}
+          {run?.target_ready_time ? new Date(run.target_ready_time).toLocaleString() : "-"}
         </Typography>
       </Paper>
+      {defaultStep &&
+        (() => {
+          const whExec = getExecution(defaultStep.step_id);
+          const whCompleted = whExec?.status === "completed";
+          return (
+            <Paper
+              sx={{
+                p: 2,
+                mb: 3,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                cursor: "pointer",
+                "&:hover": { filter: "brightness(0.97)" },
+              }}
+              onClick={() => handleOpenTask(defaultStep)}
+            >
+              <Box
+                sx={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  bgcolor: whCompleted ? "#4caf50" : "transparent",
+                  border: "2px solid #4caf50",
+                }}
+              />
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                {defaultStep.task_name}
+              </Typography>
+              {whCompleted && (
+                <Typography variant="body2" color="text.secondary">
+                  ✓ {whExec.signed_by}
+                </Typography>
+              )}
+            </Paper>
+          );
+        })()}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -258,12 +286,11 @@ function LineDetailPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {steps.map((step, idx) => {
+            {regularSteps.map((step, idx) => {
               const execution = getExecution(step.step_id);
               const startTime = getStartTime(step.step_id);
               const duration = calculateDuration(startTime, execution.end_time);
-              const status =
-                execution.status || (idx === 0 ? "in_progress" : "not_started");
+              const status = execution.status || (idx === 0 ? "in_progress" : "not_started");
               const rowColor =
                 status === "completed"
                   ? "#c8e6c9"
@@ -287,9 +314,7 @@ function LineDetailPage() {
                   <TableCell>{duration}</TableCell>
                   <TableCell>
                     {execution.signed_by ? (
-                      <Typography color="success.main">
-                        ✓ {execution.signed_by}
-                      </Typography>
+                      <Typography color="success.main">✓ {execution.signed_by}</Typography>
                     ) : (
                       "-"
                     )}
@@ -313,6 +338,18 @@ function LineDetailPage() {
         startTime={selectedStep ? getStartTime(selectedStep.step_id) : null}
         onSignOff={handleSignOff}
         canSignOff={selectedCanSignOff}
+      />
+
+      <WarehouseTaskWindow
+        open={warehouseWindowOpen}
+        onClose={() => {
+          setWarehouseWindowOpen(false);
+          if (run) refreshExecutions(run.run_id);
+        }}
+        step={selectedStep}
+        execution={selectedExecution}
+        run={run}
+        onComplete={() => run && refreshExecutions(run.run_id)}
       />
     </Box>
   );

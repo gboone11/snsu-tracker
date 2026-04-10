@@ -18,7 +18,7 @@ function ProcessStepsConfigPanel() {
   useEffect(() => {
     apiService.processSteps
       .getAll()
-      .then((res) => setSteps(res.data.data))
+      .then((res) => setSteps(res.data.data.filter((s) => !s.is_default)))
       .catch((err) => console.error("Error fetching steps:", err));
   }, []);
 
@@ -33,18 +33,18 @@ function ProcessStepsConfigPanel() {
         task_name: task,
       });
       const res = await apiService.processSteps.getAll();
-      setSteps(res.data.data);
+      const regular = res.data.data.filter((s) => !s.is_default);
+      setSteps(regular);
       setNewTeam("");
       setNewTask("");
-      await resetAllExecutions(res.data.data[0]?.step_id);
+      await resetAllExecutions(regular[0]?.step_id);
     } catch (error) {
       alert("Error adding step: " + error.message);
     }
   };
 
   const handleRemove = async (step) => {
-    if (!window.confirm(`Remove step "${step.team_name} — ${step.task_name}"?`))
-      return;
+    if (!window.confirm(`Remove step "${step.team_name} — ${step.task_name}"?`)) return;
     try {
       await apiService.processSteps.delete(step.step_id);
       const remaining = steps.filter((s) => s.step_id !== step.step_id);
@@ -80,10 +80,7 @@ function ProcessStepsConfigPanel() {
     const swapIndex = index + direction;
     if (swapIndex < 0 || swapIndex >= steps.length) return;
     const reordered = [...steps];
-    [reordered[index], reordered[swapIndex]] = [
-      reordered[swapIndex],
-      reordered[index],
-    ];
+    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
     setSteps(reordered);
     try {
       await apiService.processSteps.reorder(reordered.map((s) => s.step_id));
@@ -132,11 +129,7 @@ function ProcessStepsConfigPanel() {
               gap: 0.5,
             }}
           >
-            <IconButton
-              size="small"
-              disabled={i === 0}
-              onClick={() => handleMove(i, -1)}
-            >
+            <IconButton size="small" disabled={i === 0} onClick={() => handleMove(i, -1)}>
               <ArrowUpwardIcon fontSize="small" />
             </IconButton>
             <IconButton
@@ -159,10 +152,7 @@ function ProcessStepsConfigPanel() {
           </Box>
         ))}
         {steps.length === 0 && (
-          <Typography
-            variant="body2"
-            sx={{ color: "text.secondary", fontStyle: "italic" }}
-          >
+          <Typography variant="body2" sx={{ color: "text.secondary", fontStyle: "italic" }}>
             No process steps configured
           </Typography>
         )}
