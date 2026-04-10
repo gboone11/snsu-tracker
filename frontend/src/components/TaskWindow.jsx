@@ -22,9 +22,17 @@ export default function TaskWindow({
   onClose,
   step,
   execution,
+  startTime,
   onSignOff,
   canSignOff,
 }) {
+  const formatTime = (t) => (t ? new Date(t).toLocaleString() : "-");
+  const duration =
+    startTime && execution?.end_time
+      ? Math.round(
+          (new Date(execution.end_time) - new Date(startTime)) / 60000,
+        )
+      : null;
   const [subTasks, setSubTasks] = useState([]);
   const [subTaskExecs, setSubTaskExecs] = useState([]);
   const [editing, setEditing] = useState(false);
@@ -185,6 +193,36 @@ export default function TaskWindow({
       </DialogTitle>
 
       <DialogContent dividers>
+        {/* Info section */}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: 1,
+            mb: 2,
+            p: 1.5,
+            bgcolor: "background.default",
+            borderRadius: 1,
+          }}
+        >
+          <Typography variant="body2">
+            <strong>Status:</strong>{" "}
+            {execution?.status || "not_started"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Duration:</strong>{" "}
+            {duration != null ? `${duration} min` : "-"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Start:</strong> {formatTime(startTime)}
+          </Typography>
+          <Typography variant="body2">
+            <strong>End:</strong> {formatTime(execution?.end_time)}
+          </Typography>
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
         {/* Sub-tasks list */}
         {subTasks.length === 0 && !editing && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
