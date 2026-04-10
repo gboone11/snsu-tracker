@@ -41,4 +41,11 @@ export const apiService = {
     update: (id, data) => api.put(`/step-executions/${id}`, data),
     delete: (id) => api.delete(`/step-executions/${id}`),
   },
+  subTasks: {
+    create: (data) => api.post("/sub-tasks", data),
+    getByExecution: (executionId) =>
+      api.get(`/sub-tasks/execution/${executionId}`),
+    update: (id, data) => api.put(`/sub-tasks/${id}`, data),
+    delete: (id) => api.delete(`/sub-tasks/${id}`),
+  },
 };
