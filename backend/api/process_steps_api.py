@@ -74,7 +74,10 @@ def update_step(step_id: int, step: ProcessStepUpdate):
 
 @router.delete("/process-steps/{step_id}")
 def delete_step(step_id: int):
-    success = step_repo.delete(step_id)
+    try:
+        success = step_repo.delete(step_id)
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     if not success:
         raise HTTPException(status_code=404, detail="Step not found")
     return {"message": "Step deleted"}

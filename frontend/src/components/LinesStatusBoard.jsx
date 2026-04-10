@@ -8,9 +8,9 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import Box from "@mui/material/Box";
 import { apiService } from "../services/api";
 import TaskWindow from "./TaskWindow";
+import WarehouseTaskWindow from "./WarehouseTaskWindow";
 
 function LinesStatusBoard() {
   const navigate = useNavigate();
@@ -21,6 +21,9 @@ function LinesStatusBoard() {
   const [taskWindowOpen, setTaskWindowOpen] = useState(false);
   const [selectedStep, setSelectedStep] = useState(null);
   const [selectedRun, setSelectedRun] = useState(null);
+  const [warehouseWindowOpen, setWarehouseWindowOpen] = useState(false);
+  const [warehouseStep, setWarehouseStep] = useState(null);
+  const [warehouseRun, setWarehouseRun] = useState(null);
   useEffect(() => {
     let cancelled = false;
 
@@ -47,18 +50,17 @@ function LinesStatusBoard() {
           }
         }
 
+        const firstRegularStep = stepsData.find((s) => !s.is_default);
         const allExecutions = [];
         for (const run of allRuns) {
           const execRes = await apiService.stepExecutions.getByRun(run.run_id);
-          if (execRes.data.data.length === 0 && stepsData.length > 0) {
+          if (execRes.data.data.length === 0 && firstRegularStep) {
             await apiService.stepExecutions.create({
               run_id: run.run_id,
-              step_id: stepsData[0].step_id,
+              step_id: firstRegularStep.step_id,
               status: "in_progress",
             });
-            const refetch = await apiService.stepExecutions.getByRun(
-              run.run_id,
-            );
+            const refetch = await apiService.stepExecutions.getByRun(run.run_id);
             allExecutions.push(...refetch.data.data);
           } else {
             allExecutions.push(...execRes.data.data);
@@ -107,17 +109,13 @@ function LinesStatusBoard() {
   const getExecution = (lineId, stepId) => {
     const run = runs.find((r) => r.line_id === lineId);
     if (!run) return {};
-    return (
-      executions.find((e) => e.run_id === run.run_id && e.step_id === stepId) ||
-      {}
-    );
+    return executions.find((e) => e.run_id === run.run_id && e.step_id === stepId) || {};
   };
 
   const getStepStatus = (lineId, stepId) => {
     const execution = getExecution(lineId, stepId);
     if (execution.status === "completed") return { color: "#c8e6c9", text: "" };
-    if (execution.status === "in_progress")
-      return { color: "#fff9c4", text: "" };
+    if (execution.status === "in_progress") return { color: "#fff9c4", text: "" };
     return { color: "transparent", text: "" };
   };
 
@@ -125,16 +123,25 @@ function LinesStatusBoard() {
     e.stopPropagation();
     const run = runs.find((r) => r.line_id === lineId);
     if (!run) return;
-    setSelectedStep(step);
-    setSelectedRun(run);
-    setTaskWindowOpen(true);
+    if (step.is_default) {
+      setWarehouseStep(step);
+      setWarehouseRun(run);
+      setWarehouseWindowOpen(true);
+    } else {
+      setSelectedStep(step);
+      setSelectedRun(run);
+      setTaskWindowOpen(true);
+    }
   };
 
+  const defaultStep = steps.find((s) => s.is_default);
+  const regularSteps = steps.filter((s) => !s.is_default);
+
   const getStartTime = (run, stepId) => {
-    const idx = steps.findIndex((s) => s.step_id === stepId);
+    const idx = regularSteps.findIndex((s) => s.step_id === stepId);
     if (idx <= 0) return run?.work_order_end_time || null;
     const prevExec = executions.find(
-      (e) => e.run_id === run.run_id && e.step_id === steps[idx - 1].step_id,
+      (e) => e.run_id === run.run_id && e.step_id === regularSteps[idx - 1].step_id,
     );
     return prevExec?.end_time || null;
   };
@@ -180,12 +187,11 @@ function LinesStatusBoard() {
         });
       }
 
-      const currentStepIndex = steps.findIndex((s) => s.step_id === stepId);
-      if (currentStepIndex >= 0 && currentStepIndex < steps.length - 1) {
-        const nextStep = steps[currentStepIndex + 1];
+      const currentStepIndex = regularSteps.findIndex((s) => s.step_id === stepId);
+      if (currentStepIndex >= 0 && currentStepIndex < regularSteps.length - 1) {
+        const nextStep = regularSteps[currentStepIndex + 1];
         const nextExec = executions.find(
-          (e) =>
-            e.run_id === selectedRun.run_id && e.step_id === nextStep.step_id,
+          (e) => e.run_id === selectedRun.run_id && e.step_id === nextStep.step_id,
         );
         if (!nextExec) {
           await apiService.stepExecutions.create({
@@ -206,9 +212,9 @@ function LinesStatusBoard() {
     if (!selectedStep || !selectedRun) return false;
     const exec = getExecution(selectedRun.line_id, selectedStep.step_id);
     if (exec.status === "completed") return false;
-    const idx = steps.findIndex((s) => s.step_id === selectedStep.step_id);
+    const idx = regularSteps.findIndex((s) => s.step_id === selectedStep.step_id);
     if (idx === 0) return true;
-    const prevExec = getExecution(selectedRun.line_id, steps[idx - 1].step_id);
+    const prevExec = getExecution(selectedRun.line_id, regularSteps[idx - 1].step_id);
     return prevExec.status === "completed";
   };
 
@@ -223,7 +229,7 @@ function LinesStatusBoard() {
             <TableRow>
               <TableCell sx={{ width: 60 }}>Line</TableCell>
               <TableCell sx={{ width: 190 }}>Work Order Ended</TableCell>
-              {steps.map((step) => (
+              {regularSteps.map((step) => (
                 <TableCell key={step.step_id}>
                   {step.team_name}
                   <br />
@@ -231,6 +237,11 @@ function LinesStatusBoard() {
                 </TableCell>
               ))}
               <TableCell sx={{ width: 190 }}>Target Ready Time</TableCell>
+              {defaultStep && (
+                <TableCell sx={{ width: 80, textAlign: "center", px: 0.5 }}>
+                  {"Materials?"}
+                </TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -264,7 +275,7 @@ function LinesStatusBoard() {
                         ? new Date(lineRun.work_order_end_time).toLocaleString()
                         : "-"}
                     </TableCell>
-                    {steps.map((step) => {
+                    {regularSteps.map((step) => {
                       const status = getStepStatus(line.line_id, step.step_id);
                       return (
                         <TableCell
@@ -274,9 +285,7 @@ function LinesStatusBoard() {
                             cursor: "pointer",
                             "&:hover": { filter: "brightness(0.9)" },
                           }}
-                          onClick={(e) =>
-                            handleCellClick(line.line_id, step, e)
-                          }
+                          onClick={(e) => handleCellClick(line.line_id, step, e)}
                         >
                           {status.text}
                         </TableCell>
@@ -287,6 +296,21 @@ function LinesStatusBoard() {
                         ? new Date(lineRun.target_ready_time).toLocaleString()
                         : "-"}
                     </TableCell>
+                     {defaultStep &&
+                      (() => {
+                        const whStatus = getStepStatus(line.line_id, defaultStep.step_id);
+                        return (
+                          <TableCell
+                            sx={{
+                              bgcolor: whStatus.color,
+                              cursor: "pointer",
+                              px: 0.5,
+                              "&:hover": { filter: "brightness(0.9)" },
+                            }}
+                            onClick={(e) => handleCellClick(line.line_id, defaultStep, e)}
+                          />
+                        );
+                      })()}
                   </TableRow>
                 );
               })}
@@ -302,18 +326,30 @@ function LinesStatusBoard() {
         }}
         step={selectedStep}
         execution={
-          selectedStep && selectedRun
-            ? getExecution(selectedRun.line_id, selectedStep.step_id)
-            : {}
+          selectedStep && selectedRun ? getExecution(selectedRun.line_id, selectedStep.step_id) : {}
         }
         run={selectedRun}
         startTime={
-          selectedStep && selectedRun
-            ? getStartTime(selectedRun, selectedStep.step_id)
-            : null
+          selectedStep && selectedRun ? getStartTime(selectedRun, selectedStep.step_id) : null
         }
         onSignOff={handleSignOff}
         canSignOff={getCanSignOff()}
+      />
+
+      <WarehouseTaskWindow
+        open={warehouseWindowOpen}
+        onClose={() => {
+          setWarehouseWindowOpen(false);
+          refreshData();
+        }}
+        step={warehouseStep}
+        execution={
+          warehouseStep && warehouseRun
+            ? getExecution(warehouseRun.line_id, warehouseStep.step_id)
+            : {}
+        }
+        run={warehouseRun}
+        onComplete={refreshData}
       />
     </Paper>
   );

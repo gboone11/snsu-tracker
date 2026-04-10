@@ -54,6 +54,14 @@ class ProcessStepRepository:
     def delete(self, step_id: int) -> bool:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
+                "SELECT is_default FROM process_steps WHERE step_id = ?", (step_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                return False
+            if row[0]:
+                raise ValueError("Cannot delete a default process step")
+            cursor = conn.execute(
                 "DELETE FROM process_steps WHERE step_id = ?", (step_id,)
             )
             return cursor.rowcount > 0

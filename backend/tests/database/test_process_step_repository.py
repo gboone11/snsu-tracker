@@ -25,7 +25,7 @@ class TestProcessStepRepository(unittest.TestCase):
         self.repo.create(1, "Sanitation", "Clean line", 30)
         self.repo.create(2, "Operations", "Start line", 15)
         steps = self.repo.get_all()
-        self.assertEqual(len(steps), 2)
+        self.assertEqual(len(steps), 3)  # 2 created + 1 seeded default
 
     def test_get_by_id(self):
         step_id = self.repo.create(1, "Sanitation", "Clean line", 30)
