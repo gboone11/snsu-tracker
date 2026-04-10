@@ -146,14 +146,6 @@ export default function TaskWindow({
     await loadSubTaskData();
   };
 
-  const allSubTasksDone =
-    subTasks.length === 0 ||
-    (subTaskExecs.length >= subTasks.length &&
-      subTasks.every((st) => {
-        const ste = subTaskExecs.find((e) => e.sub_task_id === st.sub_task_id);
-        return ste?.is_completed;
-      }));
-
   const handleFinalSignOff = () => {
     const trimmed = (initials || "").trim();
     if (!trimmed || trimmed.length < 2 || trimmed.length > 3) {
@@ -295,16 +287,12 @@ export default function TaskWindow({
               <Button
                 variant="contained"
                 onClick={handleFinalSignOff}
-                disabled={!canSignOff || !allSubTasksDone}
+                disabled={!canSignOff}
               >
                 Sign Off
               </Button>
             </Box>
-            {!allSubTasksDone && subTasks.length > 0 && (
-              <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
-                Complete all sub-tasks before signing off.
-              </Typography>
-            )}
+
           </Box>
         )}
       </DialogContent>
