@@ -50,13 +50,14 @@ function LinesStatusBoard() {
           }
         }
 
+        const firstRegularStep = stepsData.find((s) => !s.is_default);
         const allExecutions = [];
         for (const run of allRuns) {
           const execRes = await apiService.stepExecutions.getByRun(run.run_id);
-          if (execRes.data.data.length === 0 && stepsData.length > 0) {
+          if (execRes.data.data.length === 0 && firstRegularStep) {
             await apiService.stepExecutions.create({
               run_id: run.run_id,
-              step_id: stepsData[0].step_id,
+              step_id: firstRegularStep.step_id,
               status: "in_progress",
             });
             const refetch = await apiService.stepExecutions.getByRun(run.run_id);
@@ -227,11 +228,6 @@ function LinesStatusBoard() {
           <TableHead>
             <TableRow>
               <TableCell sx={{ width: 60 }}>Line</TableCell>
-              {defaultStep && (
-                <TableCell sx={{ width: 40, textAlign: "center", px: 0.5 }}>
-                  <small>WH</small>
-                </TableCell>
-              )}
               <TableCell sx={{ width: 190 }}>Work Order Ended</TableCell>
               {regularSteps.map((step) => (
                 <TableCell key={step.step_id}>
@@ -241,6 +237,11 @@ function LinesStatusBoard() {
                 </TableCell>
               ))}
               <TableCell sx={{ width: 190 }}>Target Ready Time</TableCell>
+              {defaultStep && (
+                <TableCell sx={{ width: 80, textAlign: "center", px: 0.5 }}>
+                  {"Materials?"}
+                </TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -269,21 +270,6 @@ function LinesStatusBoard() {
                     >
                       {line.line_number}
                     </TableCell>
-                    {defaultStep &&
-                      (() => {
-                        const whStatus = getStepStatus(line.line_id, defaultStep.step_id);
-                        return (
-                          <TableCell
-                            sx={{
-                              bgcolor: whStatus.color === "#c8e6c9" ? "#4caf50" : "transparent",
-                              cursor: "pointer",
-                              px: 0.5,
-                              "&:hover": { filter: "brightness(0.9)" },
-                            }}
-                            onClick={(e) => handleCellClick(line.line_id, defaultStep, e)}
-                          />
-                        );
-                      })()}
                     <TableCell>
                       {lineRun?.work_order_end_time
                         ? new Date(lineRun.work_order_end_time).toLocaleString()
@@ -310,6 +296,21 @@ function LinesStatusBoard() {
                         ? new Date(lineRun.target_ready_time).toLocaleString()
                         : "-"}
                     </TableCell>
+                     {defaultStep &&
+                      (() => {
+                        const whStatus = getStepStatus(line.line_id, defaultStep.step_id);
+                        return (
+                          <TableCell
+                            sx={{
+                              bgcolor: whStatus.color,
+                              cursor: "pointer",
+                              px: 0.5,
+                              "&:hover": { filter: "brightness(0.9)" },
+                            }}
+                            onClick={(e) => handleCellClick(line.line_id, defaultStep, e)}
+                          />
+                        );
+                      })()}
                   </TableRow>
                 );
               })}

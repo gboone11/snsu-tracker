@@ -49,10 +49,11 @@ function LineDetailPage() {
         const execRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
 
         let execData = execRes.data.data;
-        if (stepsRes.data.data.length > 0 && execData.length === 0) {
+        const firstRegularStep = stepsRes.data.data.find((s) => !s.is_default);
+        if (firstRegularStep && execData.length === 0) {
           await apiService.stepExecutions.create({
             run_id: lineRun.run_id,
-            step_id: stepsRes.data.data[0].step_id,
+            step_id: firstRegularStep.step_id,
             status: "in_progress",
           });
           const updatedExecRes = await apiService.stepExecutions.getByRun(lineRun.run_id);
