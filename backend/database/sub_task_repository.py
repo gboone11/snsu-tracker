@@ -5,29 +5,21 @@ class SubTaskRepository:
     def __init__(self, db):
         self.db = db
 
-    def create(self, step_id: int, sub_task_name: str, sub_task_order: int) -> int:
+    def create(self, execution_id: int, sub_task_name: str, sub_task_order: int) -> int:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
-                "INSERT INTO sub_tasks (step_id, sub_task_name, sub_task_order) VALUES (?, ?, ?)",
-                (step_id, sub_task_name, sub_task_order),
+                "INSERT INTO sub_tasks (execution_id, sub_task_name, sub_task_order) VALUES (?, ?, ?)",
+                (execution_id, sub_task_name, sub_task_order),
             )
             return cursor.lastrowid
 
-    def get_by_step(self, step_id: int) -> List[Dict[str, Any]]:
+    def get_by_execution(self, execution_id: int) -> List[Dict[str, Any]]:
         with self.db.get_connection() as conn:
             cursor = conn.execute(
-                "SELECT * FROM sub_tasks WHERE step_id = ? ORDER BY sub_task_order",
-                (step_id,),
+                "SELECT * FROM sub_tasks WHERE execution_id = ? ORDER BY sub_task_order",
+                (execution_id,),
             )
             return [dict(row) for row in cursor.fetchall()]
-
-    def get_by_id(self, sub_task_id: int) -> Optional[Dict[str, Any]]:
-        with self.db.get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM sub_tasks WHERE sub_task_id = ?", (sub_task_id,)
-            )
-            row = cursor.fetchone()
-            return dict(row) if row else None
 
     def update(self, sub_task_id: int, updates: Dict[str, Any]) -> bool:
         if not updates:
@@ -42,9 +34,6 @@ class SubTaskRepository:
 
     def delete(self, sub_task_id: int) -> bool:
         with self.db.get_connection() as conn:
-            conn.execute(
-                "DELETE FROM sub_task_executions WHERE sub_task_id = ?", (sub_task_id,)
-            )
             cursor = conn.execute(
                 "DELETE FROM sub_tasks WHERE sub_task_id = ?", (sub_task_id,)
             )

@@ -8,7 +8,6 @@ from api.runs_api import router as runs_router
 from api.process_steps_api import router as process_steps_router
 from api.step_executions_api import router as step_executions_router
 from api.sub_tasks_api import router as sub_tasks_router
-from api.sub_task_executions_api import router as sub_task_executions_router
 
 app = FastAPI(title="SNSU Tracker API", version="1.0.0")
 
@@ -33,7 +32,6 @@ app.include_router(runs_router)
 app.include_router(process_steps_router)
 app.include_router(step_executions_router)
 app.include_router(sub_tasks_router)
-app.include_router(sub_task_executions_router)
 
 
 @app.post("/clear-data", response_model=ApiResponse)

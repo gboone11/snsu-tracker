@@ -33,8 +33,8 @@ export default function TaskWindow({
           (new Date(execution.end_time) - new Date(startTime)) / 60000,
         )
       : null;
+
   const [subTasks, setSubTasks] = useState([]);
-  const [subTaskExecs, setSubTaskExecs] = useState([]);
   const [editing, setEditing] = useState(false);
   const [newSubTaskName, setNewSubTaskName] = useState("");
   const [initials, setInitials] = useState("");
@@ -42,73 +42,29 @@ export default function TaskWindow({
 
   const isCompleted = execution?.status === "completed";
 
-  const loadSubTaskData = async () => {
-    if (!step) return;
+  const loadSubTasks = async () => {
+    if (!execution?.execution_id) return;
     try {
-      const stRes = await apiService.subTasks.getByStep(step.step_id);
-      setSubTasks(stRes.data.data);
-
-      if (execution?.execution_id) {
-        const steRes = await apiService.subTaskExecutions.getByExecution(
-          execution.execution_id,
-        );
-        const existing = steRes.data.data;
-
-        for (const st of stRes.data.data) {
-          if (!existing.find((e) => e.sub_task_id === st.sub_task_id)) {
-            await apiService.subTaskExecutions.create({
-              execution_id: execution.execution_id,
-              sub_task_id: st.sub_task_id,
-            });
-          }
-        }
-
-        const refreshed = await apiService.subTaskExecutions.getByExecution(
-          execution.execution_id,
-        );
-        setSubTaskExecs(refreshed.data.data);
-      }
+      const res = await apiService.subTasks.getByExecution(
+        execution.execution_id,
+      );
+      setSubTasks(res.data.data);
     } catch (err) {
-      console.error("TaskWindow loadData error:", err);
+      console.error("TaskWindow loadSubTasks error:", err);
     }
   };
 
   useEffect(() => {
-    if (!open || !step) return;
+    if (!open || !execution?.execution_id) return;
     let cancelled = false;
 
     async function load() {
       try {
-        const stRes = await apiService.subTasks.getByStep(step.step_id);
-        if (cancelled) return;
-
-        const subTasksData = stRes.data.data;
-
-        let subTaskExecsData = [];
-        if (execution?.execution_id) {
-          const steRes = await apiService.subTaskExecutions.getByExecution(
-            execution.execution_id,
-          );
-          const existing = steRes.data.data;
-
-          for (const st of subTasksData) {
-            if (!existing.find((e) => e.sub_task_id === st.sub_task_id)) {
-              await apiService.subTaskExecutions.create({
-                execution_id: execution.execution_id,
-                sub_task_id: st.sub_task_id,
-              });
-            }
-          }
-
-          const refreshed = await apiService.subTaskExecutions.getByExecution(
-            execution.execution_id,
-          );
-          subTaskExecsData = refreshed.data.data;
-        }
-
+        const res = await apiService.subTasks.getByExecution(
+          execution.execution_id,
+        );
         if (!cancelled) {
-          setSubTasks(subTasksData);
-          setSubTaskExecs(subTaskExecsData);
+          setSubTasks(res.data.data);
           setInitials("");
           setEndTime(execution?.end_time ? dayjs(execution.end_time) : null);
         }
@@ -121,37 +77,34 @@ export default function TaskWindow({
     return () => {
       cancelled = true;
     };
-  }, [open, step, execution?.execution_id, execution?.end_time]);
+  }, [open, execution?.execution_id, execution?.end_time]);
 
-  const handleToggleSubTask = async (ste) => {
+  const handleToggleSubTask = async (st) => {
     if (isCompleted) return;
-    const nowCompleted = ste.is_completed ? 0 : 1;
-    await apiService.subTaskExecutions.update(ste.sub_task_execution_id, {
+    const nowCompleted = st.is_completed ? 0 : 1;
+    await apiService.subTasks.update(st.sub_task_id, {
       is_completed: nowCompleted,
       completed_by: nowCompleted ? "✓" : null,
       completed_at: nowCompleted ? new Date().toISOString() : null,
     });
-    const refreshed = await apiService.subTaskExecutions.getByExecution(
-      execution.execution_id,
-    );
-    setSubTaskExecs(refreshed.data.data);
+    await loadSubTasks();
   };
 
   const handleAddSubTask = async () => {
     const name = newSubTaskName.trim();
-    if (!name) return;
+    if (!name || !execution?.execution_id) return;
     await apiService.subTasks.create({
-      step_id: step.step_id,
+      execution_id: execution.execution_id,
       sub_task_name: name,
       sub_task_order: subTasks.length + 1,
     });
     setNewSubTaskName("");
-    await loadSubTaskData();
+    await loadSubTasks();
   };
 
   const handleDeleteSubTask = async (subTaskId) => {
     await apiService.subTasks.delete(subTaskId);
-    await loadSubTaskData();
+    await loadSubTasks();
   };
 
   const handleFinalSignOff = () => {
@@ -173,7 +126,13 @@ export default function TaskWindow({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Box>
           <Typography variant="h6">{step.task_name}</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -197,7 +156,7 @@ export default function TaskWindow({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "1fr",
+            gridTemplateColumns: "1fr 1fr",
             gap: 1,
             mb: 2,
             p: 1.5,
@@ -206,8 +165,7 @@ export default function TaskWindow({
           }}
         >
           <Typography variant="body2">
-            <strong>Status:</strong>{" "}
-            {execution?.status || "not_started"}
+            <strong>Status:</strong> {execution?.status || "not_started"}
           </Typography>
           <Typography variant="body2">
             <strong>Duration:</strong>{" "}
@@ -226,45 +184,42 @@ export default function TaskWindow({
         {/* Sub-tasks list */}
         {subTasks.length === 0 && !editing && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            No sub-tasks configured. Click the edit icon to add some.
+            No sub-tasks. Click the edit icon to add some.
           </Typography>
         )}
 
-        {subTasks.map((st) => {
-          const ste = subTaskExecs.find((e) => e.sub_task_id === st.sub_task_id);
-          return (
-            <Box
-              key={st.sub_task_id}
-              sx={{ display: "flex", alignItems: "center", py: 0.5 }}
+        {subTasks.map((st) => (
+          <Box
+            key={st.sub_task_id}
+            sx={{ display: "flex", alignItems: "center", py: 0.5 }}
+          >
+            <Checkbox
+              checked={!!st.is_completed}
+              onChange={() => handleToggleSubTask(st)}
+              disabled={isCompleted || !canSignOff}
+              size="small"
+            />
+            <Typography
+              variant="body2"
+              sx={{
+                flex: 1,
+                textDecoration: st.is_completed ? "line-through" : "none",
+                color: st.is_completed ? "text.secondary" : "text.primary",
+              }}
             >
-              <Checkbox
-                checked={!!ste?.is_completed}
-                onChange={() => ste && handleToggleSubTask(ste)}
-                disabled={isCompleted || !canSignOff}
+              {st.sub_task_name}
+            </Typography>
+            {editing && (
+              <IconButton
                 size="small"
-              />
-              <Typography
-                variant="body2"
-                sx={{
-                  flex: 1,
-                  textDecoration: ste?.is_completed ? "line-through" : "none",
-                  color: ste?.is_completed ? "text.secondary" : "text.primary",
-                }}
+                color="error"
+                onClick={() => handleDeleteSubTask(st.sub_task_id)}
               >
-                {st.sub_task_name}
-              </Typography>
-              {editing && (
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={() => handleDeleteSubTask(st.sub_task_id)}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Box>
-          );
-        })}
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        ))}
 
         {/* Add sub-task (edit mode) */}
         {editing && (
@@ -302,7 +257,14 @@ export default function TaskWindow({
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Final Sign Off
             </Typography>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <DateTimePicker
                 label="End Time"
                 slotProps={{ textField: { size: "small" } }}
@@ -318,7 +280,10 @@ export default function TaskWindow({
                   setInitials(e.target.value.slice(0, 3).toUpperCase())
                 }
                 slotProps={{
-                  htmlInput: { maxLength: 3, style: { width: 50, textAlign: "center" } },
+                  htmlInput: {
+                    maxLength: 3,
+                    style: { width: 50, textAlign: "center" },
+                  },
                 }}
                 disabled={!canSignOff}
               />
@@ -330,7 +295,6 @@ export default function TaskWindow({
                 Sign Off
               </Button>
             </Box>
-
           </Box>
         )}
       </DialogContent>

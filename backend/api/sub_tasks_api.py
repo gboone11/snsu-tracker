@@ -10,7 +10,7 @@ sub_task_repo = SubTaskRepository(db)
 
 
 class SubTaskCreate(BaseModel):
-    step_id: int
+    execution_id: int
     sub_task_name: str
     sub_task_order: int = 0
 
@@ -18,22 +18,25 @@ class SubTaskCreate(BaseModel):
 class SubTaskUpdate(BaseModel):
     sub_task_name: Optional[str] = None
     sub_task_order: Optional[int] = None
+    is_completed: Optional[int] = None
+    completed_by: Optional[str] = None
+    completed_at: Optional[str] = None
 
 
 @router.post("/sub-tasks")
 def create_sub_task(sub_task: SubTaskCreate):
     try:
         sub_task_id = sub_task_repo.create(
-            sub_task.step_id, sub_task.sub_task_name, sub_task.sub_task_order
+            sub_task.execution_id, sub_task.sub_task_name, sub_task.sub_task_order
         )
         return {"message": "Sub-task created", "data": {"sub_task_id": sub_task_id}}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/sub-tasks/step/{step_id}")
-def get_sub_tasks_by_step(step_id: int):
-    return {"data": sub_task_repo.get_by_step(step_id)}
+@router.get("/sub-tasks/execution/{execution_id}")
+def get_sub_tasks_by_execution(execution_id: int):
+    return {"data": sub_task_repo.get_by_execution(execution_id)}
 
 
 @router.put("/sub-tasks/{sub_task_id}")

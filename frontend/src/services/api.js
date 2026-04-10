@@ -43,15 +43,9 @@ export const apiService = {
   },
   subTasks: {
     create: (data) => api.post("/sub-tasks", data),
-    getByStep: (stepId) => api.get(`/sub-tasks/step/${stepId}`),
+    getByExecution: (executionId) =>
+      api.get(`/sub-tasks/execution/${executionId}`),
     update: (id, data) => api.put(`/sub-tasks/${id}`, data),
     delete: (id) => api.delete(`/sub-tasks/${id}`),
-  },
-  subTaskExecutions: {
-    create: (data) => api.post("/sub-task-executions", data),
-    getByExecution: (executionId) =>
-      api.get(`/sub-task-executions/execution/${executionId}`),
-    update: (id, data) => api.put(`/sub-task-executions/${id}`, data),
-    delete: (id) => api.delete(`/sub-task-executions/${id}`),
   },
 };
