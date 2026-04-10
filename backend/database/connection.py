@@ -25,6 +25,7 @@ class Database:
             conn.close()
 
     def _init_db(self) -> None:
+        self._migrate_db()
         with self.get_connection() as conn:
             conn.executescript(
                 """
@@ -40,7 +41,8 @@ class Database:
                     step_order INTEGER NOT NULL,
                     team_name TEXT NOT NULL,
                     task_name TEXT NOT NULL,
-                    avg_duration_minutes INTEGER
+                    avg_duration_minutes INTEGER,
+                    is_default INTEGER NOT NULL DEFAULT 0
                 );
                 
                 CREATE TABLE IF NOT EXISTS runs (
@@ -80,6 +82,9 @@ class Database:
                     FOREIGN KEY (execution_id) REFERENCES step_executions(execution_id)
                 );
 
+                INSERT OR IGNORE INTO process_steps (step_id, step_order, team_name, task_name, avg_duration_minutes, is_default)
+                VALUES (1, 0, 'Warehouse', 'Warehouse Delivered Materials', NULL, 1);
+
                 CREATE INDEX IF NOT EXISTS idx_lines_order ON lines(display_order);
                 CREATE INDEX IF NOT EXISTS idx_steps_order ON process_steps(step_order);
                 CREATE INDEX IF NOT EXISTS idx_runs_line ON runs(line_id, created_at DESC);
@@ -87,6 +92,15 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_sub_tasks_exec ON sub_tasks(execution_id, sub_task_order);
             """
             )
+
+    def _migrate_db(self) -> None:
+        with self.get_connection() as conn:
+            cursor = conn.execute("PRAGMA table_info(process_steps)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if columns and "is_default" not in columns:
+                conn.execute(
+                    "ALTER TABLE process_steps ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0"
+                )
 
     def clear_data(self) -> None:
         with self.get_connection() as conn:
