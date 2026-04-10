@@ -29,9 +29,7 @@ export default function TaskWindow({
   const formatTime = (t) => (t ? new Date(t).toLocaleString() : "-");
   const duration =
     startTime && execution?.end_time
-      ? Math.round(
-          (new Date(execution.end_time) - new Date(startTime)) / 60000,
-        )
+      ? Math.round((new Date(execution.end_time) - new Date(startTime)) / 60000)
       : null;
 
   const [subTasks, setSubTasks] = useState([]);

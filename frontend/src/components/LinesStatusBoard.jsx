@@ -108,16 +108,14 @@ function LinesStatusBoard() {
     const run = runs.find((r) => r.line_id === lineId);
     if (!run) return {};
     return (
-      executions.find(
-        (e) => e.run_id === run.run_id && e.step_id === stepId,
-      ) || {}
+      executions.find((e) => e.run_id === run.run_id && e.step_id === stepId) ||
+      {}
     );
   };
 
   const getStepStatus = (lineId, stepId) => {
     const execution = getExecution(lineId, stepId);
-    if (execution.status === "completed")
-      return { color: "#c8e6c9", text: "" };
+    if (execution.status === "completed") return { color: "#c8e6c9", text: "" };
     if (execution.status === "in_progress")
       return { color: "#fff9c4", text: "" };
     return { color: "transparent", text: "" };
@@ -163,17 +161,14 @@ function LinesStatusBoard() {
           step_id: stepId,
           status: "completed",
         });
-        await apiService.stepExecutions.update(
-          newExec.data.data.execution_id,
-          {
-            status: "completed",
-            start_time: startTime,
-            end_time: endTime,
-            duration_minutes: duration,
-            signed_by: initials,
-            signed_at: new Date().toISOString(),
-          },
-        );
+        await apiService.stepExecutions.update(newExec.data.data.execution_id, {
+          status: "completed",
+          start_time: startTime,
+          end_time: endTime,
+          duration_minutes: duration,
+          signed_by: initials,
+          signed_at: new Date().toISOString(),
+        });
       } else {
         await apiService.stepExecutions.update(execution.execution_id, {
           status: "completed",
@@ -266,9 +261,7 @@ function LinesStatusBoard() {
                     </TableCell>
                     <TableCell>
                       {lineRun?.work_order_end_time
-                        ? new Date(
-                            lineRun.work_order_end_time,
-                          ).toLocaleString()
+                        ? new Date(lineRun.work_order_end_time).toLocaleString()
                         : "-"}
                     </TableCell>
                     {steps.map((step) => {
@@ -291,9 +284,7 @@ function LinesStatusBoard() {
                     })}
                     <TableCell>
                       {lineRun?.target_ready_time
-                        ? new Date(
-                            lineRun.target_ready_time,
-                          ).toLocaleString()
+                        ? new Date(lineRun.target_ready_time).toLocaleString()
                         : "-"}
                     </TableCell>
                   </TableRow>

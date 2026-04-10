@@ -14,5 +14,6 @@ pythonpath = ["."]
 
 [dependency-groups]
 dev = [
+    "pytest-cov>=7.1.0",
     "uvicorn>=0.42.0",
 ]
