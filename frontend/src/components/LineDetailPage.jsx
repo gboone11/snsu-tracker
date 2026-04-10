@@ -11,10 +11,8 @@ import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import dayjs from "dayjs";
 import { apiService } from "../services/api";
+import TaskWindow from "./TaskWindow";
 
 function LineDetailPage() {
   const { lineId } = useParams();
@@ -23,14 +21,16 @@ function LineDetailPage() {
   const [run, setRun] = useState(null);
   const [steps, setSteps] = useState([]);
   const [executions, setExecutions] = useState([]);
-  const [timeInputs, setTimeInputs] = useState({});
-  const [initialsInputs, setInitialsInputs] = useState({});
+  const [taskWindowOpen, setTaskWindowOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let cancelled = false;
+
+    async function load() {
       try {
         const lineRes = await apiService.lines.getById(lineId);
-        setLine(lineRes.data.data);
+        if (cancelled) return;
 
         const runsRes = await apiService.runs.getAll();
         let lineRun = runsRes.data.data.find(
@@ -38,26 +38,20 @@ function LineDetailPage() {
         );
 
         if (!lineRun) {
-          console.log("No run found, creating one...");
           const newRunRes = await apiService.runs.create({
             line_id: parseInt(lineId),
             status: "in_progress",
           });
           lineRun = newRunRes.data.data;
-          console.log("Created run:", lineRun);
         }
 
-        setRun(lineRun);
         const stepsRes = await apiService.processSteps.getAll();
-        setSteps(stepsRes.data.data);
-
         const execRes = await apiService.stepExecutions.getByRun(
           lineRun.run_id,
         );
-        setExecutions(execRes.data.data);
 
-        // Auto-create execution for first step if not exists
-        if (stepsRes.data.data.length > 0 && execRes.data.data.length === 0) {
+        let execData = execRes.data.data;
+        if (stepsRes.data.data.length > 0 && execData.length === 0) {
           await apiService.stepExecutions.create({
             run_id: lineRun.run_id,
             step_id: stepsRes.data.data[0].step_id,
@@ -66,18 +60,33 @@ function LineDetailPage() {
           const updatedExecRes = await apiService.stepExecutions.getByRun(
             lineRun.run_id,
           );
-          setExecutions(updatedExecRes.data.data);
+          execData = updatedExecRes.data.data;
+        }
+
+        if (!cancelled) {
+          setLine(lineRes.data.data);
+          setRun(lineRun);
+          setSteps(stepsRes.data.data);
+          setExecutions(execData);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
     };
-    fetchData();
   }, [lineId]);
 
-  const getExecution = (stepId) => {
-    return executions.find((e) => e.step_id === stepId) || {};
+  const refreshExecutions = async (runId) => {
+    const execRes = await apiService.stepExecutions.getByRun(runId);
+    setExecutions(execRes.data.data);
   };
+
+  const getExecution = (stepId) =>
+    executions.find((e) => e.step_id === stepId) || {};
 
   const getStartTime = (stepId) => {
     const idx = steps.findIndex((s) => s.step_id === stepId);
@@ -86,60 +95,22 @@ function LineDetailPage() {
     return prevExec.end_time || null;
   };
 
-  const handleTimeChange = async (stepId, value) => {
-    if (!value || !run) return;
-    const date = dayjs.isDayjs(value) ? value.toDate() : new Date(value);
-    if (isNaN(date.getTime())) return;
-
-    const execution = getExecution(stepId);
-    const isoValue = date.toISOString();
-
-    if (!execution.execution_id) {
-      const newExec = await apiService.stepExecutions.create({
-        run_id: run.run_id,
-        step_id: stepId,
-        status: "in_progress",
-      });
-      await apiService.stepExecutions.update(newExec.data.data.execution_id, {
-        end_time: isoValue,
-      });
-    } else {
-      await apiService.stepExecutions.update(execution.execution_id, {
-        end_time: isoValue,
-      });
-    }
-    const execRes = await apiService.stepExecutions.getByRun(run.run_id);
-    setExecutions(execRes.data.data);
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return "-";
+    return Math.round((new Date(endTime) - new Date(startTime)) / 60000);
   };
 
-  const handleSignOff = async (stepId) => {
-    const initials = (initialsInputs[stepId] || "").trim();
-    if (!initials || initials.length < 2 || initials.length > 3) {
-      alert("Please enter 2 or 3 character initials.");
-      return;
-    }
-    console.log("=== SIGN OFF START ===", { stepId, run });
-    if (!run) {
-      console.log("❌ No run found, exiting");
-      return;
-    }
+  const handleOpenTask = (step) => {
+    setSelectedStep(step);
+    setTaskWindowOpen(true);
+  };
 
+  const handleSignOff = async (stepId, initials, endTimeIso) => {
+    if (!run) return;
     const execution = getExecution(stepId);
-    console.log("Current execution:", execution);
-
-    const endInput = timeInputs[`${stepId}-end_time`];
 
     let startTime = getStartTime(stepId);
-    let endTime = execution.end_time;
-
-    if (endInput) {
-      const date = dayjs.isDayjs(endInput)
-        ? endInput.toDate()
-        : new Date(endInput);
-      if (!isNaN(date.getTime())) {
-        endTime = date.toISOString();
-      }
-    }
+    let endTime = endTimeIso || execution.end_time;
 
     let duration = null;
     if (startTime && endTime) {
@@ -147,28 +118,30 @@ function LineDetailPage() {
     }
 
     if (!duration || duration < 0) {
-      alert(
-        "End time must be after start time (duration must be positive and non-zero.",
-      );
+      alert("End time must be after start time.");
       return;
     }
 
     try {
       if (!execution.execution_id) {
-        console.log("Creating new execution...");
         await apiService.stepExecutions.create({
           run_id: run.run_id,
           step_id: stepId,
           status: "completed",
-          start_time: startTime,
-          end_time: endTime,
-          duration_minutes: duration,
-          signed_by: initials,
-          signed_at: new Date().toISOString(),
         });
-        console.log("✓ Created execution");
+        const execRes = await apiService.stepExecutions.getByRun(run.run_id);
+        const newExec = execRes.data.data.find((e) => e.step_id === stepId);
+        if (newExec) {
+          await apiService.stepExecutions.update(newExec.execution_id, {
+            status: "completed",
+            start_time: startTime,
+            end_time: endTime,
+            duration_minutes: duration,
+            signed_by: initials,
+            signed_at: new Date().toISOString(),
+          });
+        }
       } else {
-        console.log("Updating existing execution:", execution.execution_id);
         await apiService.stepExecutions.update(execution.execution_id, {
           status: "completed",
           start_time: startTime,
@@ -177,58 +150,30 @@ function LineDetailPage() {
           signed_by: initials,
           signed_at: new Date().toISOString(),
         });
-        console.log("✓ Updated execution");
       }
 
       const currentStepIndex = steps.findIndex((s) => s.step_id === stepId);
-      console.log(
-        "Current step index:",
-        currentStepIndex,
-        "Total steps:",
-        steps.length,
-      );
-
       if (currentStepIndex >= 0 && currentStepIndex < steps.length - 1) {
         const nextStep = steps[currentStepIndex + 1];
-        console.log("Next step:", nextStep);
         const nextExecution = getExecution(nextStep.step_id);
-        console.log("Next execution:", nextExecution);
-
         if (!nextExecution.execution_id) {
-          console.log("Creating next step execution...");
           await apiService.stepExecutions.create({
             run_id: run.run_id,
             step_id: nextStep.step_id,
             status: "in_progress",
-            start_time: endTime,
           });
-          console.log("✓ Created next step execution");
         } else if (nextExecution.status !== "completed") {
-          console.log("Updating next step to in_progress...");
           await apiService.stepExecutions.update(nextExecution.execution_id, {
             status: "in_progress",
             start_time: endTime,
           });
-          console.log("✓ Updated next step");
         }
       }
 
-      console.log("Refreshing executions...");
-      const execRes = await apiService.stepExecutions.getByRun(run.run_id);
-      console.log("New executions:", execRes.data.data);
-      setExecutions(execRes.data.data);
-      console.log("=== SIGN OFF COMPLETE ===");
+      await refreshExecutions(run.run_id);
     } catch (error) {
-      console.error("❌ Error in handleSignOff:", error);
+      console.error("Error in handleSignOff:", error);
     }
-  };
-
-  const calculateDuration = (startTime, endTime) => {
-    if (!startTime || !endTime) return "-";
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    const diff = Math.round((end - start) / 60000);
-    return diff;
   };
 
   const handleResetTasks = async () => {
@@ -245,15 +190,25 @@ function LineDetailPage() {
           status: "in_progress",
         });
       }
-      const execRes = await apiService.stepExecutions.getByRun(run.run_id);
-      setExecutions(execRes.data.data);
-      setTimeInputs({});
+      await refreshExecutions(run.run_id);
     } catch (error) {
       alert("Error resetting tasks: " + error.message);
     }
   };
 
   if (!line) return <Box sx={{ p: 3 }}>Loading...</Box>;
+
+  const selectedExecution = selectedStep
+    ? getExecution(selectedStep.step_id)
+    : {};
+  const selectedIdx = selectedStep
+    ? steps.findIndex((s) => s.step_id === selectedStep.step_id)
+    : -1;
+  const selectedIsCompleted = selectedExecution?.status === "completed";
+  const selectedPrevCompleted =
+    selectedIdx === 0 ||
+    getExecution(steps[selectedIdx - 1]?.step_id)?.status === "completed";
+  const selectedCanSignOff = !selectedIsCompleted && selectedPrevCompleted;
 
   return (
     <Box sx={{ p: 3 }}>
@@ -298,9 +253,8 @@ function LineDetailPage() {
               <TableCell>Team</TableCell>
               <TableCell>Task</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>End Time</TableCell>
               <TableCell>Duration (min)</TableCell>
-              <TableCell>Sign Off</TableCell>
+              <TableCell>Signed By</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -316,37 +270,20 @@ function LineDetailPage() {
                   : status === "in_progress"
                     ? "#fff9c4"
                     : "inherit";
-              const isCompleted = status === "completed";
-              const prevCompleted =
-                idx === 0 ||
-                getExecution(steps[idx - 1].step_id).status === "completed";
-              const canSignOff = !isCompleted && prevCompleted;
               return (
-                <TableRow key={step.step_id} sx={{ backgroundColor: rowColor }}>
+                <TableRow
+                  key={step.step_id}
+                  sx={{
+                    backgroundColor: rowColor,
+                    cursor: "pointer",
+                    "&:hover": { filter: "brightness(0.95)" },
+                  }}
+                  onClick={() => handleOpenTask(step)}
+                >
                   <TableCell>{idx + 1}</TableCell>
                   <TableCell>{step.team_name}</TableCell>
                   <TableCell>{step.task_name}</TableCell>
-                  <TableCell>
-                    {execution.status ||
-                      (idx === 0 ? "in_progress" : "not_started")}
-                  </TableCell>
-                  <TableCell>
-                    <DateTimePicker
-                      slotProps={{ textField: { size: "small" } }}
-                      value={
-                        timeInputs[`${step.step_id}-end_time`] ??
-                        (execution.end_time ? dayjs(execution.end_time) : null)
-                      }
-                      onChange={(newValue) => {
-                        setTimeInputs({
-                          ...timeInputs,
-                          [`${step.step_id}-end_time`]: newValue,
-                        });
-                        handleTimeChange(step.step_id, newValue);
-                      }}
-                      disabled={isCompleted || !canSignOff}
-                    />
-                  </TableCell>
+                  <TableCell>{status}</TableCell>
                   <TableCell>{duration}</TableCell>
                   <TableCell>
                     {execution.signed_by ? (
@@ -354,38 +291,7 @@ function LineDetailPage() {
                         ✓ {execution.signed_by}
                       </Typography>
                     ) : (
-                      <Box
-                        sx={{ display: "flex", gap: 1, alignItems: "center" }}
-                      >
-                        <TextField
-                          size="small"
-                          placeholder="Initials"
-                          value={initialsInputs[step.step_id] || ""}
-                          onChange={(e) =>
-                            setInitialsInputs({
-                              ...initialsInputs,
-                              [step.step_id]: e.target.value
-                                .slice(0, 3)
-                                .toUpperCase(),
-                            })
-                          }
-                          slotProps={{
-                            htmlInput: {
-                              maxLength: 3,
-                              style: { width: 40, textAlign: "center" },
-                            },
-                          }}
-                          disabled={!canSignOff}
-                        />
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={() => handleSignOff(step.step_id)}
-                          disabled={!canSignOff}
-                        >
-                          Sign Off
-                        </Button>
-                      </Box>
+                      "-"
                     )}
                   </TableCell>
                 </TableRow>
@@ -394,6 +300,20 @@ function LineDetailPage() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      <TaskWindow
+        open={taskWindowOpen}
+        onClose={() => {
+          setTaskWindowOpen(false);
+          if (run) refreshExecutions(run.run_id);
+        }}
+        step={selectedStep}
+        execution={selectedExecution}
+        run={run}
+        startTime={selectedStep ? getStartTime(selectedStep.step_id) : null}
+        onSignOff={handleSignOff}
+        canSignOff={selectedCanSignOff}
+      />
     </Box>
   );
 }

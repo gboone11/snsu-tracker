@@ -10,6 +10,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Box from "@mui/material/Box";
 import { apiService } from "../services/api";
+import TaskWindow from "./TaskWindow";
 
 function LinesStatusBoard() {
   const navigate = useNavigate();
@@ -17,15 +18,21 @@ function LinesStatusBoard() {
   const [runs, setRuns] = useState([]);
   const [steps, setSteps] = useState([]);
   const [executions, setExecutions] = useState([]);
-
+  const [taskWindowOpen, setTaskWindowOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState(null);
+  const [selectedRun, setSelectedRun] = useState(null);
   useEffect(() => {
-    const fetchData = async () => {
+    let cancelled = false;
+
+    async function load() {
       try {
         const [linesRes, runsRes, stepsRes] = await Promise.all([
           apiService.lines.getAll(),
           apiService.runs.getAll(),
           apiService.processSteps.getAll(),
         ]);
+        if (cancelled) return;
+
         const allLines = linesRes.data.data;
         const stepsData = stepsRes.data.data;
 
@@ -58,31 +65,156 @@ function LinesStatusBoard() {
           }
         }
 
-        setLines(allLines);
-        setSteps(stepsData);
-        setRuns(allRuns);
-        setExecutions(allExecutions);
+        if (!cancelled) {
+          setLines(allLines);
+          setSteps(stepsData);
+          setRuns(allRuns);
+          setExecutions(allExecutions);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
     };
-    fetchData();
   }, []);
 
-  const getStepStatus = (lineId, stepIndex) => {
+  const refreshData = async () => {
+    try {
+      const [linesRes, runsRes, stepsRes] = await Promise.all([
+        apiService.lines.getAll(),
+        apiService.runs.getAll(),
+        apiService.processSteps.getAll(),
+      ]);
+      const allRuns = runsRes.data.data;
+      const allExecutions = [];
+      for (const run of allRuns) {
+        const execRes = await apiService.stepExecutions.getByRun(run.run_id);
+        allExecutions.push(...execRes.data.data);
+      }
+      setLines(linesRes.data.data);
+      setSteps(stepsRes.data.data);
+      setRuns(allRuns);
+      setExecutions(allExecutions);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  };
+
+  const getExecution = (lineId, stepId) => {
     const run = runs.find((r) => r.line_id === lineId);
-    if (!run) return { color: "", text: "" };
-    const step = steps[stepIndex];
-    if (!step) return { color: "", text: "" };
-    const execution = executions.find(
-      (e) => e.run_id === run.run_id && e.step_id === step.step_id,
+    if (!run) return {};
+    return (
+      executions.find(
+        (e) => e.run_id === run.run_id && e.step_id === stepId,
+      ) || {}
     );
-    if (!execution) return { color: "", text: "" };
+  };
+
+  const getStepStatus = (lineId, stepId) => {
+    const execution = getExecution(lineId, stepId);
     if (execution.status === "completed")
-      return { color: "green", text: execution.signed_by || "✓" };
+      return { color: "#c8e6c9", text: "" };
     if (execution.status === "in_progress")
-      return { color: "yellow", text: "In Progress" };
-    return { color: "", text: "" };
+      return { color: "#fff9c4", text: "" };
+    return { color: "transparent", text: "" };
+  };
+
+  const handleCellClick = (lineId, step, e) => {
+    e.stopPropagation();
+    const run = runs.find((r) => r.line_id === lineId);
+    if (!run) return;
+    setSelectedStep(step);
+    setSelectedRun(run);
+    setTaskWindowOpen(true);
+  };
+
+  const getStartTime = (run, stepId) => {
+    const idx = steps.findIndex((s) => s.step_id === stepId);
+    if (idx <= 0) return run?.work_order_end_time || null;
+    const prevExec = executions.find(
+      (e) => e.run_id === run.run_id && e.step_id === steps[idx - 1].step_id,
+    );
+    return prevExec?.end_time || null;
+  };
+
+  const handleSignOff = async (stepId, initials, endTimeIso) => {
+    if (!selectedRun) return;
+    const execution = getExecution(selectedRun.line_id, stepId);
+    const startTime = getStartTime(selectedRun, stepId);
+    const endTime = endTimeIso || execution.end_time;
+
+    let duration = null;
+    if (startTime && endTime) {
+      duration = Math.round((new Date(endTime) - new Date(startTime)) / 60000);
+    }
+    if (!duration || duration < 0) {
+      alert("End time must be after start time.");
+      return;
+    }
+
+    try {
+      if (!execution.execution_id) {
+        const newExec = await apiService.stepExecutions.create({
+          run_id: selectedRun.run_id,
+          step_id: stepId,
+          status: "completed",
+        });
+        await apiService.stepExecutions.update(
+          newExec.data.data.execution_id,
+          {
+            status: "completed",
+            start_time: startTime,
+            end_time: endTime,
+            duration_minutes: duration,
+            signed_by: initials,
+            signed_at: new Date().toISOString(),
+          },
+        );
+      } else {
+        await apiService.stepExecutions.update(execution.execution_id, {
+          status: "completed",
+          start_time: startTime,
+          end_time: endTime,
+          duration_minutes: duration,
+          signed_by: initials,
+          signed_at: new Date().toISOString(),
+        });
+      }
+
+      const currentStepIndex = steps.findIndex((s) => s.step_id === stepId);
+      if (currentStepIndex >= 0 && currentStepIndex < steps.length - 1) {
+        const nextStep = steps[currentStepIndex + 1];
+        const nextExec = executions.find(
+          (e) =>
+            e.run_id === selectedRun.run_id && e.step_id === nextStep.step_id,
+        );
+        if (!nextExec) {
+          await apiService.stepExecutions.create({
+            run_id: selectedRun.run_id,
+            step_id: nextStep.step_id,
+            status: "in_progress",
+          });
+        }
+      }
+
+      await refreshData();
+    } catch (error) {
+      console.error("Error in handleSignOff:", error);
+    }
+  };
+
+  const getCanSignOff = () => {
+    if (!selectedStep || !selectedRun) return false;
+    const exec = getExecution(selectedRun.line_id, selectedStep.step_id);
+    if (exec.status === "completed") return false;
+    const idx = steps.findIndex((s) => s.step_id === selectedStep.step_id);
+    if (idx === 0) return true;
+    const prevExec = getExecution(selectedRun.line_id, steps[idx - 1].step_id);
+    return prevExec.status === "completed";
   };
 
   return (
@@ -107,57 +239,91 @@ function LinesStatusBoard() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {[...lines].sort((a, b) => {
-              const runA = runs.find((r) => r.line_id === a.line_id);
-              const runB = runs.find((r) => r.line_id === b.line_id);
-              const timeA = runA?.target_ready_time ? new Date(runA.target_ready_time).getTime() : Infinity;
-              const timeB = runB?.target_ready_time ? new Date(runB.target_ready_time).getTime() : Infinity;
-              return timeA - timeB;
-            }).map((line) => {
-              const lineRun = runs.find((r) => r.line_id === line.line_id);
-              return (
-                <TableRow key={line.line_id}>
-                  <TableCell
-                    sx={{
-                      cursor: "pointer",
-                      "&:hover": { bgcolor: "action.hover" },
-                    }}
-                    onClick={() => navigate(`/line/${line.line_id}`)}
-                  >
-                    {line.line_number}
-                  </TableCell>
-                  <TableCell>
-                    {lineRun?.work_order_end_time
-                      ? new Date(lineRun.work_order_end_time).toLocaleString()
-                      : "-"}
-                  </TableCell>
-                  {steps.map((step, i) => {
-                    const status = getStepStatus(line.line_id, i);
-                    return (
-                      <TableCell
-                        key={step.step_id}
-                        sx={{
-                          bgcolor:
-                            status.color === "green"
-                              ? "#c8e6c9"
-                              : status.color === "yellow"
-                                ? "#fff9c4"
-                                : "transparent",
-                        }}
-                      ></TableCell>
-                    );
-                  })}
-                  <TableCell>
-                    {lineRun?.target_ready_time
-                      ? new Date(lineRun.target_ready_time).toLocaleString()
-                      : "-"}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {[...lines]
+              .sort((a, b) => {
+                const runA = runs.find((r) => r.line_id === a.line_id);
+                const runB = runs.find((r) => r.line_id === b.line_id);
+                const timeA = runA?.target_ready_time
+                  ? new Date(runA.target_ready_time).getTime()
+                  : Infinity;
+                const timeB = runB?.target_ready_time
+                  ? new Date(runB.target_ready_time).getTime()
+                  : Infinity;
+                return timeA - timeB;
+              })
+              .map((line) => {
+                const lineRun = runs.find((r) => r.line_id === line.line_id);
+                return (
+                  <TableRow key={line.line_id}>
+                    <TableCell
+                      sx={{
+                        cursor: "pointer",
+                        "&:hover": { bgcolor: "action.hover" },
+                      }}
+                      onClick={() => navigate(`/line/${line.line_id}`)}
+                    >
+                      {line.line_number}
+                    </TableCell>
+                    <TableCell>
+                      {lineRun?.work_order_end_time
+                        ? new Date(
+                            lineRun.work_order_end_time,
+                          ).toLocaleString()
+                        : "-"}
+                    </TableCell>
+                    {steps.map((step) => {
+                      const status = getStepStatus(line.line_id, step.step_id);
+                      return (
+                        <TableCell
+                          key={step.step_id}
+                          sx={{
+                            bgcolor: status.color,
+                            cursor: "pointer",
+                            "&:hover": { filter: "brightness(0.9)" },
+                          }}
+                          onClick={(e) =>
+                            handleCellClick(line.line_id, step, e)
+                          }
+                        >
+                          {status.text}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell>
+                      {lineRun?.target_ready_time
+                        ? new Date(
+                            lineRun.target_ready_time,
+                          ).toLocaleString()
+                        : "-"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <TaskWindow
+        open={taskWindowOpen}
+        onClose={() => {
+          setTaskWindowOpen(false);
+          refreshData();
+        }}
+        step={selectedStep}
+        execution={
+          selectedStep && selectedRun
+            ? getExecution(selectedRun.line_id, selectedStep.step_id)
+            : {}
+        }
+        run={selectedRun}
+        startTime={
+          selectedStep && selectedRun
+            ? getStartTime(selectedRun, selectedStep.step_id)
+            : null
+        }
+        onSignOff={handleSignOff}
+        canSignOff={getCanSignOff()}
+      />
     </Paper>
   );
 }
