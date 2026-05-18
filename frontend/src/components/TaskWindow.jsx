@@ -38,6 +38,7 @@ export default function TaskWindow({
   const [newSubTaskName, setNewSubTaskName] = useState("");
   const [initials, setInitials] = useState("");
   const [localEndTime, setLocalEndTime] = useState(null);
+  const [comments, setComments] = useState("");
 
   const isCompleted = execution?.status === "completed";
 
@@ -66,6 +67,7 @@ export default function TaskWindow({
           setSubTasks(res.data.data);
           setInitials("");
           setLocalEndTime(endTime ? dayjs(endTime) : null);
+          setComments(execution?.signed_comments || "");
         }
       } catch (err) {
         console.error("TaskWindow load error:", err);
@@ -106,11 +108,16 @@ export default function TaskWindow({
     await loadSubTasks();
   };
 
-  const handleFinalSignOff = () => {
+  const handleFinalSignOff = async () => {
     const trimmed = (initials || "").trim();
     if (!trimmed || trimmed.length < 2 || trimmed.length > 3) {
       alert("Please enter 2 or 3 character initials.");
       return;
+    }
+    if (comments.trim() && execution?.execution_id) {
+      await apiService.stepExecutions.update(execution.execution_id, {
+        signed_comments: comments.trim(),
+      });
     }
     const endVal = localEndTime
       ? dayjs.isDayjs(localEndTime)
@@ -245,6 +252,16 @@ export default function TaskWindow({
             <Typography color="success.main" variant="h6">
               ✓ Signed off by {execution.signed_by}
             </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {execution.signed_at
+                ? new Date(execution.signed_at).toLocaleString()
+                : ""}
+            </Typography>
+            {execution.signed_comments && (
+              <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
+                "{execution.signed_comments}"
+              </Typography>
+            )}
           </Box>
         ) : (
           <Box>
@@ -289,6 +306,17 @@ export default function TaskWindow({
                 Sign Off
               </Button>
             </Box>
+            <TextField
+              size="small"
+              label="Comments"
+              multiline
+              minRows={2}
+              fullWidth
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              disabled={!canSignOff}
+              sx={{ mt: 2 }}
+            />
           </Box>
         )}
       </DialogContent>
