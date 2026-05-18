@@ -125,7 +125,6 @@ export default function TaskWindow({
         : new Date(localEndTime).toISOString()
       : null;
     onSignOff(step.step_id, trimmed, endVal);
-    onClose();
   };
 
   if (!step) return null;
