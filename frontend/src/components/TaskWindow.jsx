@@ -23,20 +23,21 @@ export default function TaskWindow({
   step,
   execution,
   startTime,
+  endTime,
   onSignOff,
   canSignOff,
 }) {
   const formatTime = (t) => (t ? new Date(t).toLocaleString() : "-");
   const duration =
-    startTime && execution?.end_time
-      ? Math.round((new Date(execution.end_time) - new Date(startTime)) / 60000)
+    startTime && endTime
+      ? Math.round((new Date(endTime) - new Date(startTime)) / 60000)
       : null;
 
   const [subTasks, setSubTasks] = useState([]);
   const [editing, setEditing] = useState(false);
   const [newSubTaskName, setNewSubTaskName] = useState("");
   const [initials, setInitials] = useState("");
-  const [endTime, setEndTime] = useState(null);
+  const [localEndTime, setLocalEndTime] = useState(null);
 
   const isCompleted = execution?.status === "completed";
 
@@ -64,7 +65,7 @@ export default function TaskWindow({
         if (!cancelled) {
           setSubTasks(res.data.data);
           setInitials("");
-          setEndTime(execution?.end_time ? dayjs(execution.end_time) : null);
+          setLocalEndTime(endTime ? dayjs(endTime) : null);
         }
       } catch (err) {
         console.error("TaskWindow load error:", err);
@@ -75,7 +76,7 @@ export default function TaskWindow({
     return () => {
       cancelled = true;
     };
-  }, [open, execution?.execution_id, execution?.end_time]);
+  }, [open, execution?.execution_id, endTime]);
 
   const handleToggleSubTask = async (st) => {
     if (isCompleted) return;
@@ -111,10 +112,10 @@ export default function TaskWindow({
       alert("Please enter 2 or 3 character initials.");
       return;
     }
-    const endVal = endTime
-      ? dayjs.isDayjs(endTime)
-        ? endTime.toDate().toISOString()
-        : new Date(endTime).toISOString()
+    const endVal = localEndTime
+      ? dayjs.isDayjs(localEndTime)
+        ? localEndTime.toDate().toISOString()
+        : new Date(localEndTime).toISOString()
       : null;
     onSignOff(step.step_id, trimmed, endVal);
     onClose();
@@ -173,7 +174,7 @@ export default function TaskWindow({
             <strong>Start:</strong> {formatTime(startTime)}
           </Typography>
           <Typography variant="body2">
-            <strong>End:</strong> {formatTime(execution?.end_time)}
+            <strong>End:</strong> {formatTime(endTime)}
           </Typography>
         </Box>
 
@@ -244,11 +245,6 @@ export default function TaskWindow({
             <Typography color="success.main" variant="h6">
               ✓ Signed off by {execution.signed_by}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {execution.signed_at
-                ? new Date(execution.signed_at).toLocaleString()
-                : ""}
-            </Typography>
           </Box>
         ) : (
           <Box>
@@ -266,8 +262,8 @@ export default function TaskWindow({
               <DateTimePicker
                 label="End Time"
                 slotProps={{ textField: { size: "small" } }}
-                value={endTime}
-                onChange={setEndTime}
+                value={localEndTime}
+                onChange={setLocalEndTime}
                 disabled={!canSignOff}
               />
               <TextField

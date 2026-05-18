@@ -337,6 +337,7 @@ function LineDetailPage() {
         execution={selectedExecution}
         run={run}
         startTime={selectedStep ? getStartTime(selectedStep.step_id) : null}
+        endTime={selectedExecution?.end_time || null}
         onSignOff={handleSignOff}
         canSignOff={selectedCanSignOff}
       />
