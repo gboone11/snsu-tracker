@@ -190,6 +190,7 @@ function LineDetailPage() {
       console.error("Error in handleSignOff:", error);
     }
   };
+  // eslint-disable-next-line react-hooks/refs
   handleSignOffRef.current = handleSignOff;
   const stableHandleSignOff = useCallback((...args) => handleSignOffRef.current(...args), []);
 
