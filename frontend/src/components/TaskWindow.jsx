@@ -78,7 +78,7 @@ export default function TaskWindow({
     return () => {
       cancelled = true;
     };
-  }, [open, execution?.execution_id, endTime]);
+  }, [open, execution?.execution_id, endTime, execution?.signed_comments]);
 
   const handleToggleSubTask = async (st) => {
     if (isCompleted) return;
@@ -250,11 +250,6 @@ export default function TaskWindow({
           <Box sx={{ textAlign: "center" }}>
             <Typography color="success.main" variant="h6">
               ✓ Signed off by {execution.signed_by}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {execution.signed_at
-                ? new Date(execution.signed_at).toLocaleString()
-                : ""}
             </Typography>
             {execution.signed_comments && (
               <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
