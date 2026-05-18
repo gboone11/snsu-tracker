@@ -22,6 +22,7 @@ class StepExecutionUpdate(BaseModel):
     duration_minutes: Optional[int] = None
     signed_by: Optional[str] = None
     signed_at: Optional[str] = None
+    signed_comments: Optional[str] = None
 
 
 @router.post("/step-executions")
