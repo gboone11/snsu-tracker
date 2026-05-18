@@ -332,6 +332,11 @@ function LinesStatusBoard() {
         startTime={
           selectedStep && selectedRun ? getStartTime(selectedRun, selectedStep.step_id) : null
         }
+        endTime={
+          selectedStep && selectedRun
+            ? getExecution(selectedRun.line_id, selectedStep.step_id)?.end_time || null
+            : null
+        }
         onSignOff={handleSignOff}
         canSignOff={getCanSignOff()}
       />

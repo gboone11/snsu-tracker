@@ -25,7 +25,6 @@ class Database:
             conn.close()
 
     def _init_db(self) -> None:
-        self._migrate_db()
         with self.get_connection() as conn:
             conn.executescript(
                 """
@@ -67,6 +66,7 @@ class Database:
                     duration_minutes INTEGER,
                     signed_by TEXT,
                     signed_at TIMESTAMP,
+                    signed_comments TEXT,
                     FOREIGN KEY (run_id) REFERENCES runs(run_id),
                     FOREIGN KEY (step_id) REFERENCES process_steps(step_id)
                 );
@@ -92,15 +92,6 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_sub_tasks_exec ON sub_tasks(execution_id, sub_task_order);
             """
             )
-
-    def _migrate_db(self) -> None:
-        with self.get_connection() as conn:
-            cursor = conn.execute("PRAGMA table_info(process_steps)")
-            columns = [row[1] for row in cursor.fetchall()]
-            if columns and "is_default" not in columns:
-                conn.execute(
-                    "ALTER TABLE process_steps ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0"
-                )
 
     def clear_data(self) -> None:
         with self.get_connection() as conn:
