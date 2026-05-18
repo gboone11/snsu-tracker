@@ -114,17 +114,17 @@ export default function TaskWindow({
       alert("Please enter 2 or 3 character initials.");
       return;
     }
-    if (comments.trim() && execution?.execution_id) {
-      await apiService.stepExecutions.update(execution.execution_id, {
-        signed_comments: comments.trim(),
-      });
-    }
     const endVal = localEndTime
       ? dayjs.isDayjs(localEndTime)
         ? localEndTime.toDate().toISOString()
         : new Date(localEndTime).toISOString()
       : null;
-    onSignOff(step.step_id, trimmed, endVal);
+
+    const commentsToSave = comments.trim();
+
+    if (typeof onSignOff === "function") {
+      await onSignOff(step.step_id, trimmed, endVal, commentsToSave);
+    }
   };
 
   if (!step) return null;

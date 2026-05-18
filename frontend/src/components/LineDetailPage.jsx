@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
@@ -109,11 +109,21 @@ function LineDetailPage() {
     }
   };
 
-  const handleSignOff = async (stepId, initials, endTimeIso) => {
+  const handleSignOffRef = useRef(null);
+  const handleSignOff = async (stepId, initials, endTimeIso, commentsText) => {
     if (!run) return;
     const execution = getExecution(stepId);
 
-    let startTime = getStartTime(stepId);
+    // Ensure work_order_end_time is set on the run (needed as start time for first step)
+    let woEnd = run.work_order_end_time;
+    if (!woEnd) {
+      woEnd = new Date().toISOString();
+      await apiService.runs.update(run.run_id, { work_order_end_time: woEnd });
+      setRun((prev) => ({ ...prev, work_order_end_time: woEnd }));
+    }
+
+    const idx = regularSteps.findIndex((s) => s.step_id === stepId);
+    let startTime = idx <= 0 ? woEnd : (getExecution(regularSteps[idx - 1].step_id).end_time || null);
     let endTime = endTimeIso || execution.end_time;
 
     let duration = null;
@@ -143,6 +153,7 @@ function LineDetailPage() {
             duration_minutes: duration,
             signed_by: initials,
             signed_at: new Date().toISOString(),
+            ...(commentsText ? { signed_comments: commentsText } : {}),
           });
         }
       } else {
@@ -153,6 +164,7 @@ function LineDetailPage() {
           duration_minutes: duration,
           signed_by: initials,
           signed_at: new Date().toISOString(),
+          ...(commentsText ? { signed_comments: commentsText } : {}),
         });
       }
 
@@ -173,12 +185,13 @@ function LineDetailPage() {
           });
         }
       }
-
       await refreshExecutions(run.run_id);
     } catch (error) {
       console.error("Error in handleSignOff:", error);
     }
   };
+  handleSignOffRef.current = handleSignOff;
+  const stableHandleSignOff = useCallback((...args) => handleSignOffRef.current(...args), []);
 
   const handleResetTasks = async () => {
     if (!window.confirm("Reset all tasks? This will clear all progress.")) return;
@@ -338,7 +351,7 @@ function LineDetailPage() {
         run={run}
         startTime={selectedStep ? getStartTime(selectedStep.step_id) : null}
         endTime={selectedExecution?.end_time || null}
-        onSignOff={handleSignOff}
+        onSignOff={stableHandleSignOff}
         canSignOff={selectedCanSignOff}
       />
 
